@@ -174,7 +174,7 @@ class SparkSubmitOptionParser {
         }
         continue;
       }
-
+      // TODO 对于未知参数，当从Spark资源处理：即SCALA/JAVA 应用的jar包或者pyspark的py文件等
       if (!handleUnknown(arg)) {
         break;
       }

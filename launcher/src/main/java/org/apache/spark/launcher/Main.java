@@ -27,7 +27,7 @@ import java.util.Map;
 import static org.apache.spark.launcher.CommandBuilderUtils.*;
 
 /**
- * TODO Spark 所有命令行的入口
+ * TODO Spark 所有命令行的入口:这个类只负责生成各个命令最终的启动命令
  * Command line interface for the Spark launcher. Used internally by Spark scripts.
  */
 class Main {
@@ -58,6 +58,7 @@ class Main {
     boolean printLaunchCommand = !isEmpty(System.getenv("SPARK_PRINT_LAUNCH_COMMAND"));
     Map<String, String> env = new HashMap<>();
     List<String> cmd;
+    // TODO 生成spark-submit: 包括spark-shell pyspark sparkR spark-sql的启动命令
     if (className.equals("org.apache.spark.deploy.SparkSubmit")) {
       try {
         AbstractCommandBuilder builder = new SparkSubmitCommandBuilder(args);
@@ -149,6 +150,19 @@ class Main {
       return cmd;
     }
 
+    // TODO pyspark sparkR和SparkSubmit交互的信息保持到env后是在这里转换成参数的
+    //  pyspark命令的参数应该是：'env PYSPARK_SUBMIT_ARGS="\"--name\" \"PySparkShell\" \"pyspark-shell\""; python'
+    //    但是最终spark-class脚本中的exec "${CMD[@]}"最终会调用到java_gateway.py的launch_gateway方法启动SparkSubmit，
+    //    原因是pyspark cli脚本里面修改了python的环境变量PYTHONSTARTUP为${SPARK_HOME}/python/pyspark/shell.py,
+    //    shell.py -> SparkSession._create_shell_session[${SPARK_HOME}/python/pyspark/sql/session.py] ->
+    //    -> getOrCreate -> SparkContext.getOrCreate[${SPARK_HOME}/python/pyspark/context.py] -> __init__
+    //    -> _ensure_initialized -> launch_gateway[SparkContext._gateway = gateway or launch_gateway(conf)]
+    //    -> launch_gateway在java_gateway.py里面拼接一个spark-submit sparkr-shell命令启动gateWay并持有它）
+
+    // TODO sparkR命令的参数就更直接了：
+    //  "env R_PROFILE_USER='${SPARK_HOME}/R/lib/SparkR/profile/shell.R' SPARKR_SUBMIT_ARGS='sparkr-shell'; R"
+    //  其中环境变量R_PROFILE_USER是用于指定R语言进入执行环境时默认执行的脚本文件，就像上面的PYTHONSTARTUP环境变量是用于指定Python
+    //  命令交互式执行时预先执行的python脚本一样。
     List<String> newCmd = new ArrayList<>();
     newCmd.add("env");
 

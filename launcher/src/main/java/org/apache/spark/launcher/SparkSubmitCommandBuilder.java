@@ -125,18 +125,21 @@ class SparkSubmitCommandBuilder extends AbstractCommandBuilder {
 
     if (args.size() > 0) {
       switch (args.get(0)) {
+        // TODO pyspark
         case PYSPARK_SHELL:
           this.allowsMixedArguments = true;
           appResource = PYSPARK_SHELL;
           submitArgs = args.subList(1, args.size());
           break;
 
+          // TODO sparkR
         case SPARKR_SHELL:
           this.allowsMixedArguments = true;
           appResource = SPARKR_SHELL;
           submitArgs = args.subList(1, args.size());
           break;
 
+          // TODO run-example
         case RUN_EXAMPLE:
           isExample = true;
           appResource = SparkLauncher.NO_RESOURCE;
@@ -156,8 +159,10 @@ class SparkSubmitCommandBuilder extends AbstractCommandBuilder {
   @Override
   public List<String> buildCommand(Map<String, String> env)
       throws IOException, IllegalArgumentException {
+    // TODO pyspark python进程启动命令
     if (PYSPARK_SHELL.equals(appResource) && !isSpecialCommand) {
       return buildPySparkShellCommand(env);
+      // TODO sparkR R进程启动命令
     } else if (SPARKR_SHELL.equals(appResource) && !isSpecialCommand) {
       return buildSparkRCommand(env);
     } else {
@@ -242,6 +247,12 @@ class SparkSubmitCommandBuilder extends AbstractCommandBuilder {
 
     args.addAll(parsedArgs);
     if (appResource != null) {
+      // TODO 这里将appResource加入构建的用于启动spark提交任务的命令中是为了让SparkSubmit能区分出spark-shell
+      //  pyspark和sparkR等命令行提交的任务，从而能正确判断是否需要为pyspark cli等非Jvm语言的交互式命令启动对应的gateWay Server
+      //  用于和对应的python / R进程交互(注意：以脚本方式提交的sparkR/pyspark应用不需要gateway Server, 直接通过ProcessBuilder执行
+      //  对应脚本获取结果就行)
+      //  GatWay Server: PythonGatewayServer、RBackend
+      //  脚本方式提交时的进程启动器：PythonRunner、RRunner
       args.add(appResource);
     }
     args.addAll(appArgs);
@@ -260,6 +271,7 @@ class SparkSubmitCommandBuilder extends AbstractCommandBuilder {
 
     List<String> cmd = buildJavaCommand(extraClassPath);
     // Take Thrift Server as daemon
+    // TODO ThriftServer多加一个守护进程JVM参数
     if (isThriftServer(mainClass)) {
       addOptionString(cmd, System.getenv("SPARK_DAEMON_JAVA_OPTS"));
     }
@@ -292,6 +304,7 @@ class SparkSubmitCommandBuilder extends AbstractCommandBuilder {
         config.get(SparkLauncher.DRIVER_EXTRA_LIBRARY_PATH));
     }
 
+    // TODO sparkR、pyspark、spark-shell、spark-submit提交pyspark或者Java、Scala应用的最终入口都在这
     cmd.add("org.apache.spark.deploy.SparkSubmit");
     cmd.addAll(buildSparkSubmitArgs());
     return cmd;
@@ -320,7 +333,10 @@ class SparkSubmitCommandBuilder extends AbstractCommandBuilder {
 
     // When launching the pyspark shell, the spark-submit arguments should be stored in the
     // PYSPARK_SUBMIT_ARGS env variable.
+    // TODO pyspark-shell: 用于spark-submit提交的pyspark cli的Python进程gateWay创建时判断是否时pyspark命令行提交的程序
     appResource = PYSPARK_SHELL_RESOURCE;
+    // TODO 这里最终会调用buildSparkSubmitArgs,将这些参数保持到env中(buildSparkSubmitCommand是
+    //  直接将这些参数追加在SparkSubmit类的后面作为命令行参数的)
     constructEnvVarArgs(env, "PYSPARK_SUBMIT_ARGS");
 
     // Will pick up the binary executable in the following order
@@ -330,6 +346,7 @@ class SparkSubmitCommandBuilder extends AbstractCommandBuilder {
     // 4. environment variable PYSPARK_PYTHON
     // 5. python
     List<String> pyargs = new ArrayList<>();
+    // 拼接python进程启动命令: 不是IPython的会这里应该只输出一个"python"
     pyargs.add(firstNonEmpty(conf.get(SparkLauncher.PYSPARK_DRIVER_PYTHON),
       conf.get(SparkLauncher.PYSPARK_PYTHON),
       System.getenv("PYSPARK_DRIVER_PYTHON"),
@@ -356,15 +373,20 @@ class SparkSubmitCommandBuilder extends AbstractCommandBuilder {
     }
     // When launching the SparkR shell, store the spark-submit arguments in the SPARKR_SUBMIT_ARGS
     // env variable.
+    // TODO sparkr-shell: 用于spark-submit提交的sparkR cli的R进程gateWay创建时判断是否时sparkR命令行提交的程序
     appResource = SPARKR_SHELL_RESOURCE;
+    // TODO 这里最终会调用buildSparkSubmitArgs,将这些参数保持到env中(buildSparkSubmitCommand是
+    //  直接将这些参数追加在SparkSubmit类的后面作为命令行参数的)
     constructEnvVarArgs(env, "SPARKR_SUBMIT_ARGS");
 
     // Set shell.R as R_PROFILE_USER to load the SparkR package when the shell comes up.
     String sparkHome = System.getenv("SPARK_HOME");
+    // TODO 指定R的启动文件shell.R
     env.put("R_PROFILE_USER",
             join(File.separator, sparkHome, "R", "lib", "SparkR", "profile", "shell.R"));
 
     List<String> args = new ArrayList<>();
+    // TODO R执行文件路径
     args.add(firstNonEmpty(conf.get(SparkLauncher.SPARKR_R_SHELL),
       System.getenv("SPARKR_DRIVER_R"), "R"));
     return args;
@@ -473,6 +495,7 @@ class SparkSubmitCommandBuilder extends AbstractCommandBuilder {
           mainClass = value;
           if (specialClasses.containsKey(value)) {
             allowsMixedArguments = true;
+            // TODO spark-shell cli的appResource标志，用于SparkSubmit初始化提交入口时判断是否是spark-shell命令行
             appResource = specialClasses.get(value);
           }
           break;

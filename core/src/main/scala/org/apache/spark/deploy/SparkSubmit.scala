@@ -77,16 +77,19 @@ private[spark] class SparkSubmit extends Logging {
   import DependencyUtils._
   import SparkSubmit._
 
+  // TODO sparkR、pyspark、spark-shell、spark-submit提交pyspark或者Java、Scala应用的最终入口都在这
   def doSubmit(args: Array[String]): Unit = {
     // Initialize logging if it hasn't been done yet. Keep track of whether logging needs to
     // be reset before the application starts.
     val uninitLog = initializeLogIfNecessary(true, silent = true)
 
+    // TODO 参数格式化工具
     val appArgs = parseArguments(args)
     if (appArgs.verbose) {
       logInfo(appArgs.toString)
     }
     appArgs.action match {
+        // TODO sparkR、pyspark、spark-shell、spark-submit
       case SparkSubmitAction.SUBMIT => submit(appArgs, uninitLog)
       case SparkSubmitAction.KILL => kill(appArgs)
       case SparkSubmitAction.REQUEST_STATUS => requestStatus(appArgs)
@@ -149,6 +152,7 @@ private[spark] class SparkSubmit extends Logging {
   }
 
   /**
+   * TODO  sparkR、pyspark、spark-shell、spark-submit
    * Submit the application using the provided parameters, ensuring to first wrap
    * in a doAs when --proxy-user is specified.
    */
@@ -205,6 +209,7 @@ private[spark] class SparkSubmit extends Logging {
   }
 
   /**
+   * TODO 这里会处理区分sparkR、pyspark、spark-shell、spark-submit以及初始化环境配置信息
    * Prepare the environment for submitting an application.
    *
    * @param args the parsed SparkSubmitArguments used for environment preparation.
@@ -467,10 +472,13 @@ private[spark] class SparkSubmit extends Logging {
     // If we're running a python app, set the main class to our specific python runner
     if (args.isPython && deployMode == CLIENT) {
       if (args.primaryResource == PYSPARK_SHELL) {
+        // TODO pyspark cli对应的gateWay Server，用于和python进程交互
         args.mainClass = "org.apache.spark.api.python.PythonGatewayServer"
       } else {
         // If a python file is provided, add it to the child arguments and list of files to deploy.
         // Usage: PythonAppRunner <main python file> <extra python files> [app arguments]
+        // TODO pyspark 用户应用对应的用于启动python进程的入口：PythonRunner -> sc -> launch_gateway
+        //  -> spark-submit pyspark-shell -> 启动用于交互的PythonGatewayServer -> python进程和gateway通信交互完成任务执行
         args.mainClass = "org.apache.spark.deploy.PythonRunner"
         args.childArgs = ArrayBuffer(localPrimaryResource, localPyFiles) ++ args.childArgs
       }
@@ -531,10 +539,14 @@ private[spark] class SparkSubmit extends Logging {
     // If we're running an R app, set the main class to our specific R runner
     if (args.isR && deployMode == CLIENT) {
       if (args.primaryResource == SPARKR_SHELL) {
+        // TODO sparkR cli对应的用于和R进程交互的gateWay Server（该流程为sparkR cli -> spark-class -> 用于交互的spark Java进程）
         args.mainClass = "org.apache.spark.api.r.RBackend"
       } else {
         // If an R file is provided, add it to the child arguments and list of files to deploy.
         // Usage: RRunner <main R file> [app arguments]
+        // TODO 用户的sparkR脚本的启动类：因为这种情况不需要交互式运行，直接启动进程(其实这种方式的完整流程为：RRunner -> R脚本
+        //  -> sparkR库里面检测到没有gateWay 然后拼接一个spark-submit sparkr-shell命令启动gateway 并持有它用于后期通过RPC方式和
+        //  JVM那边的SparkContext通信交换数据和发送执行逻辑指令
         args.mainClass = "org.apache.spark.deploy.RRunner"
         args.childArgs = ArrayBuffer(localPrimaryResource) ++ args.childArgs
         args.files = mergeFileLists(args.files, args.primaryResource)
@@ -862,6 +874,7 @@ private[spark] class SparkSubmit extends Logging {
   }
 
   /**
+   * TODO  sparkR、pyspark、spark-shell、spark-submit
    * Run the main method of the child class using the submit arguments.
    *
    * This runs in two steps. First, we prepare the launch environment by setting up
@@ -874,6 +887,7 @@ private[spark] class SparkSubmit extends Logging {
    * running cluster deploy mode or python applications.
    */
   private def runMain(args: SparkSubmitArguments, uninitLog: Boolean): Unit = {
+    // TODO 这里会处理区分sparkR、pyspark、spark-shell、spark-submit
     val (childArgs, childClasspath, sparkConf, childMainClass) = prepareSubmitEnvironment(args)
     // Let the main class re-initialize the logging system once it starts.
     if (uninitLog) {
@@ -888,14 +902,17 @@ private[spark] class SparkSubmit extends Logging {
       logInfo(s"Classpath elements:\n${childClasspath.mkString("\n")}")
       logInfo("\n")
     }
+    // TODO 这里获取类加载器会判断spark.driver.userClassPathFirst
     val loader = getSubmitClassLoader(sparkConf)
     for (jar <- childClasspath) {
+      // TODO 加载jar
       addJarToClasspath(jar, loader)
     }
 
     var mainClass: Class[_] = null
 
     try {
+      // TODO  sparkR、pyspark、spark-shell、spark-submit
       mainClass = Utils.classForName(childMainClass)
     } catch {
       case e: ClassNotFoundException =>
@@ -913,7 +930,7 @@ private[spark] class SparkSubmit extends Logging {
         }
         throw new SparkUserAppException(CLASS_NOT_FOUND_EXIT_STATUS)
     }
-
+    // TODO 反射创建Spark应用
     val app: SparkApplication = if (classOf[SparkApplication].isAssignableFrom(mainClass)) {
       mainClass.getConstructor().newInstance().asInstanceOf[SparkApplication]
     } else {
@@ -931,6 +948,7 @@ private[spark] class SparkSubmit extends Logging {
     }
 
     try {
+      // TODO JavaMainApplication、ClientApp、RestSubmissionClientApp
       app.start(childArgs.toArray, sparkConf)
     } catch {
       case t: Throwable =>
@@ -972,8 +990,11 @@ object SparkSubmit extends CommandLineUtils with Logging {
   private val ALL_DEPLOY_MODES = CLIENT | CLUSTER
 
   // Special primary resource names that represent shells rather than application jars.
+  // TODO 用于区分spark-shell命令
   private val SPARK_SHELL = "spark-shell"
+  // TODO pyspark命令
   private val PYSPARK_SHELL = "pyspark-shell"
+  // TODO sparkR命令
   private val SPARKR_SHELL = "sparkr-shell"
   private val SPARKR_PACKAGE_ARCHIVE = "sparkr.zip"
   private val R_PACKAGE_ARCHIVE = "rpkg.zip"
@@ -1023,6 +1044,7 @@ object SparkSubmit extends CommandLineUtils with Logging {
   }
 
   /**
+   * TODO 用于判断是否是用户提交的jar 即spark-submit xxx
    * Return whether the given primary resource represents a user jar.
    */
   private[deploy] def isUserJar(res: String): Boolean = {

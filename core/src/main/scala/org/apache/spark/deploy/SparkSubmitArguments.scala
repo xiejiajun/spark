@@ -36,6 +36,7 @@ import org.apache.spark.network.util.JavaUtils
 import org.apache.spark.util.Utils
 
 /**
+ * TODO  这个类用于处理spark-submit指定的诸多参数，比如 --class  --conf --driver-memory等等
  * Parses and encapsulates arguments from the spark-submit script.
  * The env argument is used for testing.
  */
@@ -104,6 +105,7 @@ private[deploy] class SparkSubmitArguments(args: Seq[String], env: Map[String, S
     defaultProperties
   }
 
+  // TODO 这里自定调用类parse方法格式化参数，parse里面会调用handleUnknown
   // Set parameters from command line arguments
   parse(args.asJava)
 
@@ -335,7 +337,8 @@ private[deploy] class SparkSubmitArguments(args: Seq[String], env: Map[String, S
 
       case MASTER =>
         master = value
-
+      // TODO 获取--class ，spark-shell命令的class就是在这里直接获取的，pyspark和sparkR命令会在
+      //  SparkSubmit.prepareSubmitEnvironment里面再次处理得到它们的class
       case CLASS =>
         mainClass = value
 
@@ -460,6 +463,7 @@ private[deploy] class SparkSubmitArguments(args: Seq[String], env: Map[String, S
 
     primaryResource =
       if (!SparkSubmit.isShell(opt) && !SparkSubmit.isInternal(opt)) {
+        // TODO 价值用户的jar或者py文件等
         Utils.resolveURI(opt).toString
       } else {
         opt
