@@ -40,6 +40,8 @@ object PythonRunner {
     val pyFiles = args(1)
     val otherArgs = args.slice(2, args.length)
     val sparkConf = new SparkConf()
+    // TODO Driver端获取Python命令：先从spark.pyspark.driver.python配置取，没有再从spark.pyspark.python
+    //  再没有从PYSPARK_DRIVER_PYTHON系统变量取，再没有从PYSPARK_PYTHON取，最后还是没有直接python
     val pythonExec = sparkConf.get(PYSPARK_DRIVER_PYTHON)
       .orElse(sparkConf.get(PYSPARK_PYTHON))
       .orElse(sys.env.get("PYSPARK_DRIVER_PYTHON"))
