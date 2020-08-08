@@ -27,6 +27,7 @@ import java.util.Map;
 import static org.apache.spark.launcher.CommandBuilderUtils.*;
 
 /**
+ * TODO Spark 所有命令行的入口
  * Command line interface for the Spark launcher. Used internally by Spark scripts.
  */
 class Main {
@@ -103,6 +104,7 @@ class Main {
   }
 
   /**
+   * TODO 这是Spark所有命令行的入口
    * Prepare spark commands with the appropriate command builder.
    * If printLaunchCommand is set then the commands will be printed to the stderr.
    */
