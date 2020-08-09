@@ -34,6 +34,7 @@ private[spark] object PythonGatewayServer extends Logging {
 
   def main(args: Array[String]): Unit = {
     val sparkConf = new SparkConf()
+    // TODO 为py4j启动gateWay Server 方便python通过py4j客户端远程调用Java代码
     val gatewayServer: Py4JServer = new Py4JServer(sparkConf)
 
     gatewayServer.start()

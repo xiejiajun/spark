@@ -545,7 +545,7 @@ private[spark] class SparkSubmit extends Logging {
         // If an R file is provided, add it to the child arguments and list of files to deploy.
         // Usage: RRunner <main R file> [app arguments]
         // TODO 用户的sparkR脚本的启动类：因为这种情况不需要交互式运行，直接启动进程(其实这种方式的完整流程为：RRunner -> R脚本
-        //  -> sparkR库里面检测到没有gateWay 然后拼接一个spark-submit sparkr-shell命令启动gateway 并持有它用于后期通过RPC方式和
+        //  -> sparkR库里面检测到没有gateWay 然后拼接一个spark-submit sparkr-shell命令启动gateway Server并持有它用于后期通过RPC方式和
         //  JVM那边的SparkContext通信交换数据和发送执行逻辑指令
         args.mainClass = "org.apache.spark.deploy.RRunner"
         args.childArgs = ArrayBuffer(localPrimaryResource) ++ args.childArgs
