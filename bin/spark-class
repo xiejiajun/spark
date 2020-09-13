@@ -68,6 +68,7 @@ fi
 # The exit code of the launcher is appended to the output, so the parent shell removes it from the
 # command array and checks the value to see if the launcher succeeded.
 build_command() {
+  ## 通过org.apache.spark.launcher.Main组装出各种类型的Spark程序的启动命令：比如java -cp xxx 、python xxx.py等命令
   "$RUNNER" -Xmx128m -cp "$LAUNCH_CLASSPATH" org.apache.spark.launcher.Main "$@"
   printf "%d\0" $?
 }
@@ -77,6 +78,22 @@ set +o posix
 CMD=()
 while IFS= read -d '' -r ARG; do
   CMD+=("$ARG")
+  ## bash的<<, <<<, < <()用法： https://www.jianshu.com/p/864dd13c181d
+  ###  cmd1 < <(cmd2)
+  ####    标准名称叫：Process substitution
+  ####    这个语法看起来很怪异，其实他就是两个语法。
+  ####      <(cmd2): 把cmd2的输出写入一个临时文件
+  ####      cmd1 < : 这是一个标准的stdin重定向。
+  ####    把两个合起来，就是把cmd2的输出(stdout)传递给cmd1作为输入(stdin)；中间通过临时文件做传递。
+  ####    举一个例子： $ cat < <(echo "12345") 的结果为12345
+  ####       分开看：
+  ####        ________________________
+  ####       ｜ $ echo <(echo "12345")|
+  ####       ｜ /dev/fd/63            |
+  ####        ------------------------
+  ####    可见<(echo "12345")的输出就是文件/dev/fd/63，文件内容是字符串“12345“；/dev/fd/63是一个匿名pipe文件(为什么是63，估计是当时分的吧？我猜的)；其实我们可以假设整个命令是这样的：
+  ####    $ cat < /dev/fd/63
+  ####    整个命令串的含义就是把字符串"12345"写到临时文件/dev/fd/63，然后让cat从临时文件/dev/fd/63读取内容。
 done < <(build_command "$@")
 
 COUNT=${#CMD[@]}
