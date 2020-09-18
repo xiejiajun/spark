@@ -63,6 +63,7 @@ object SparkHadoopWriterUtils {
   // setting can take effect:
   def isOutputSpecValidationEnabled(conf: SparkConf): Boolean = {
     val validationDisabled = disableOutputSpecValidation.value
+    // TODO 为true时saveAsTextFile往HDFS、S3等文件系统写数据时会检查目标文件存在，存在则抛异常。如果不想检查可以设置为false
     val enabledInConf = conf.getBoolean("spark.hadoop.validateOutputSpecs", true)
     enabledInConf && !validationDisabled
   }
