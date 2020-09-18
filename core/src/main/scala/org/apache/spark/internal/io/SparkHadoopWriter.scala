@@ -68,6 +68,7 @@ object SparkHadoopWriter extends Logging {
     config.initOutputFormat(jobContext)
 
     // Assert the output format/key/value class is set in JobConf.
+    // TODO 这里会判断是否需要检查输出文件是否存在 （如果开启了检查且存在就抛异常)
     config.assertConf(jobContext, rdd.conf)
 
     val committer = config.createCommitter(commitJobId)
@@ -283,6 +284,7 @@ class HadoopMapRedWriteConfigUtil[K, V: ClassTag](conf: SerializableJobConf)
     logDebug("Saving as hadoop file of type (" + keyClass.getSimpleName + ", " +
       valueClass.getSimpleName + ")")
 
+    // TODO 为true时saveAsTextFile往HDFS、S3等文件系统写数据时会检查目标文件存在，存在则抛异常。如果不想检查可以设置为false
     if (SparkHadoopWriterUtils.isOutputSpecValidationEnabled(conf)) {
       // FileOutputFormat ignores the filesystem parameter
       val ignoredFs = FileSystem.get(getConf)

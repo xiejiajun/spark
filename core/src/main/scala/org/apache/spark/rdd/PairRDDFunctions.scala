@@ -1062,6 +1062,7 @@ class PairRDDFunctions[K, V](self: RDD[(K, V)])
       logWarning(warningMessage)
     }
 
+    // TODO 设置输出目录
     FileOutputFormat.setOutputPath(hadoopConf,
       SparkHadoopWriterUtils.createPathFromString(path, hadoopConf))
     saveAsHadoopDataset(hadoopConf)
@@ -1093,6 +1094,7 @@ class PairRDDFunctions[K, V](self: RDD[(K, V)])
    */
   def saveAsHadoopDataset(conf: JobConf): Unit = self.withScope {
     val config = new HadoopMapRedWriteConfigUtil[K, V](new SerializableJobConf(conf))
+    // TODO 写数据
     SparkHadoopWriter.write(
       rdd = self,
       config = config)

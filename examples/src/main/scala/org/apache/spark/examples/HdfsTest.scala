@@ -35,6 +35,9 @@ object HdfsTest {
       .getOrCreate()
     val file = spark.read.text(args(0)).rdd
     val mapped = file.map(s => s.length).cache()
+    // TODO RDD.saveAsTextFile -> PairRDDFunctions.saveAsHadoopFile
+    //   -> PairRDDFunctions.saveAsHadoopDataset -> SparkHadoopWriter.write ->
+    mapped.saveAsTextFile("hdfs:///tmp/test.txt")
     for (iter <- 1 to 10) {
       val start = System.currentTimeMillis()
       for (x <- mapped) { x + 2 }
