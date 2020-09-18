@@ -20,7 +20,22 @@ package org.apache.spark.examples
 
 import org.apache.spark.sql.SparkSession
 
-
+/**
+ * Spark计算结果继续追加在HDFS目录下，不会覆盖之前的文件: https://blog.csdn.net/zmc921/article/details/74948786
+ *   https://blog.csdn.net/zmc921/category_7020046.html
+ * spark读取hdfs上的文件和写入数据到hdfs上面: https://www.cnblogs.com/VIP8/p/10447236.html
+ * sparksql读取hive中的数据保存到hdfs中: https://blog.csdn.net/u012719230/article/details/82492745
+ * sparkSQL 写数据到MySQL的几种模式解释以及overwrite模式在不删除表结构的情况下的实现:https://blog.csdn.net/qq_42012160/article/details/88816985
+ * spark遇到的问题（持续更新）: https://www.cnblogs.com/carsonwuu/p/11207083.html
+ * spark将计算结果写入到hdfs的两种方法：https://www.cnblogs.com/luckuan/p/5252580.html
+ * Kafka+Spark streaming读取数据存hdfs：https://blog.csdn.net/qq_25908611/article/details/80921205
+ *     解决Spark Streaming写入HDFS的小文件问题： https://www.jianshu.com/p/372105903e75
+ * 是时候放弃 Spark Streaming, 转向 Structured Streaming 了：https://zhuanlan.zhihu.com/p/51883927
+ * 实战|使用Spark Structured Streaming写入Hudi：https://www.cnblogs.com/leesf456/p/12728603.html?utm_source=tuicool&utm_medium=referral
+ * Spark Structured Streaming：将数据落地按照数据字段进行分区方案：https://www.cnblogs.com/yy3b2007com/p/9776876.html
+ * 10.4 spark2 structured streaming 实时计算hdfs文件输入流cdh：https://blog.csdn.net/kk25114/article/details/98777468
+ * Spark Structured Streaming 写checkpoint 到HDFS 抖动的排查：https://www.jianshu.com/p/86c81db326e1
+ */
 object HdfsTest {
 
   /** Usage: HdfsTest [file] */
