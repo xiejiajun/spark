@@ -265,6 +265,7 @@ private[spark] object KubernetesUtils extends Logging {
       resource: String,
       conf: Option[SparkConf] = None,
       shouldUploadLocal: Boolean): String = {
+    // TODO 上传应该上传且在本地文件系统(isLocalAndResolvable判断)的resource
     if (isLocalAndResolvable(resource)) {
       if (shouldUploadLocal) {
         uploadFileUri(resource, conf)

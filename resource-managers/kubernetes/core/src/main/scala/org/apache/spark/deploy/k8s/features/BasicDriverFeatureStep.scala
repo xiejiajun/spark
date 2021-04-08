@@ -162,6 +162,7 @@ private[spark] class BasicDriverFeatureStep(conf: KubernetesDriverConf)
       MEMORY_OVERHEAD_FACTOR.key -> overheadFactor.toString)
     // try upload local, resolvable files to a hadoop compatible file system
     Seq(JARS, FILES, ARCHIVES, SUBMIT_PYTHON_FILES).foreach { key =>
+      // TODO isLocalAndResolvable筛选出file://或者没有schema的uri来上传
       val uris = conf.get(key).filter(uri => KubernetesUtils.isLocalAndResolvable(uri))
       val value = {
         if (key == ARCHIVES) {
@@ -170,6 +171,7 @@ private[spark] class BasicDriverFeatureStep(conf: KubernetesDriverConf)
           uris
         }
       }
+      // TODO 上传isLocalAndResolvable筛选出筛选出来的本地文件
       val resolved = KubernetesUtils.uploadAndTransformFileUris(value, Some(conf.sparkConf))
       if (resolved.nonEmpty) {
         val resolvedValue = if (key == ARCHIVES) {
