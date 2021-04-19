@@ -143,6 +143,7 @@ private[deploy] class ExecutorRunner(
   }
 
   /**
+   * TODO 通过子进程方式启动Executor，入口类为CoarseGrainedExecutorBackend
    * Download and run the executor described in our ApplicationDescription
    */
   private def fetchAndRunExecutor(): Unit = {
@@ -192,6 +193,7 @@ private[deploy] class ExecutorRunner(
       stderrAppender = FileAppender(process.getErrorStream, stderr, conf)
 
       state = ExecutorState.RUNNING
+      // TODO 同步Executor启动状态到AppMaster
       worker.send(ExecutorStateChanged(appId, execId, state, None, None))
       // Wait for it to exit; executor may exit with code 0 (when driver instructs it to shutdown)
       // or with nonzero exit code

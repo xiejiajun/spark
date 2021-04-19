@@ -236,6 +236,7 @@ private[spark] class TaskSchedulerImpl(
     logInfo("Adding task set " + taskSet.id + " with " + tasks.length + " tasks "
       + "resource profile " + taskSet.resourceProfileId)
     this.synchronized {
+      // TODO 创建用于提交Task的TaskSet管理器
       val manager = createTaskSetManager(taskSet, maxTaskFailures)
       val stage = taskSet.stageId
       val stageTaskSets =
@@ -393,6 +394,7 @@ private[spark] class TaskSchedulerImpl(
           try {
             val prof = sc.resourceProfileManager.resourceProfileFromId(taskSetRpID)
             val taskCpus = ResourceProfile.getTaskCpusOrDefaultForProfile(prof, conf)
+            // TODO 构建Task描述信息
             val (taskDescOption, didReject) =
               taskSet.resourceOffer(execId, host, maxLocality, taskResAssignments)
             noDelayScheduleRejects &= !didReject

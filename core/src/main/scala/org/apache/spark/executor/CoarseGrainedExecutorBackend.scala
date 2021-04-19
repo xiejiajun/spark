@@ -96,7 +96,10 @@ private[spark] class CoarseGrainedExecutorBackend(
     }
     rpcEnv.asyncSetupEndpointRefByURI(driverUrl).flatMap { ref =>
       // This is a very fast action so we can use "ThreadUtils.sameThread"
+      // TODO 和Driver通信的Rpc客户端
       driver = Some(ref)
+
+      // TODO 发送注册Executor的消息
       ref.ask[Boolean](RegisterExecutor(executorId, self, hostname, cores, extractLogUrls,
         extractAttributes, _resources, resourceProfile.id))
     }(ThreadUtils.sameThread).onComplete {
@@ -151,18 +154,24 @@ private[spark] class CoarseGrainedExecutorBackend(
       .map(e => (e._1.substring(prefix.length).toUpperCase(Locale.ROOT), e._2)).toMap
   }
 
+  // TODO 接收&处理Rpc请求(MessageLoop.receiveLoopRunnable -> MessageLoop.receiveLoop
+  //  -> Inbox.process -> endpoint.receive)
   override def receive: PartialFunction[Any, Unit] = {
+        // TODO 处理注册Executor消息
     case RegisteredExecutor =>
       logInfo("Successfully registered with driver")
       try {
+        // TODO 初始化Task执行器
         executor = new Executor(executorId, hostname, env, userClassPath, isLocal = false,
           resources = _resources)
+        // TODO 通过Netty向Driver发起启动Executor的RPC调用
         driver.get.send(LaunchedExecutor(executorId))
       } catch {
         case NonFatal(e) =>
           exitExecutor(1, "Unable to create executor due to " + e.getMessage, e)
       }
 
+      // TODO 处理Driver端发送过来的LaunchTask事件
     case LaunchTask(data) =>
       if (executor == null) {
         exitExecutor(1, "Received LaunchTask command but executor was null")
@@ -170,6 +179,7 @@ private[spark] class CoarseGrainedExecutorBackend(
         val taskDesc = TaskDescription.decode(data.value)
         logInfo("Got assigned task " + taskDesc.taskId)
         taskResources(taskDesc.taskId) = taskDesc.resources
+        // TODO 启动Task
         executor.launchTask(this, taskDesc)
       }
 
@@ -207,6 +217,8 @@ private[spark] class CoarseGrainedExecutorBackend(
       decommissionSelf()
   }
 
+  // TODO 接收&处理Rpc请求(MessageLoop.receiveLoopRunnable -> MessageLoop.receiveLoop
+  //  -> Inbox.process -> endpoint.receiveAndReply)
   override def receiveAndReply(context: RpcCallContext): PartialFunction[Any, Unit] = {
     case ExecutorSigPWRReceived =>
       var driverNotified = false
@@ -374,6 +386,7 @@ private[spark] object CoarseGrainedExecutorBackend extends Logging {
 
   def main(args: Array[String]): Unit = {
     val createFn: (RpcEnv, Arguments, SparkEnv, ResourceProfile) =>
+    // TODO Executor中用于处理Rpc请求
       CoarseGrainedExecutorBackend = { case (rpcEnv, arguments, env, resourceProfile) =>
       new CoarseGrainedExecutorBackend(rpcEnv, arguments.driverUrl, arguments.executorId,
         arguments.bindAddress, arguments.hostname, arguments.cores, arguments.userClassPath.toSeq,
@@ -441,6 +454,7 @@ private[spark] object CoarseGrainedExecutorBackend extends Logging {
       val env = SparkEnv.createExecutorEnv(driverConf, arguments.executorId, arguments.bindAddress,
         arguments.hostname, arguments.cores, cfg.ioEncryptionKey, isLocal = false)
 
+      // TODO Rpc请求处理
       env.rpcEnv.setupEndpoint("Executor",
         backendCreateFn(env.rpcEnv, arguments, env, cfg.resourceProfile))
       arguments.workerUrl.foreach { url =>

@@ -439,6 +439,7 @@ private[spark] class TaskSetManager(
         }
       }
 
+      // TODO 构建用于提交到Executor的Task描述信息
       val taskDescription =
         dequeueTask(execId, host, allowedLocality)
           .map { case (index, taskLocality, speculative) =>
@@ -457,6 +458,7 @@ private[spark] class TaskSetManager(
         }
         // Serialize and return the task
         val serializedTask: ByteBuffer = try {
+          // TODO 序列化Task
           ser.serialize(task)
         } catch {
           // If the task cannot be serialized, then there's no point to re-attempt the task,
@@ -474,6 +476,7 @@ private[spark] class TaskSetManager(
             s"(${serializedTask.limit() / 1024} KiB). The maximum recommended task size is " +
             s"${TaskSetManager.TASK_SIZE_TO_WARN_KIB} KiB.")
         }
+            // TODO 添加到Running队列等待自动调度
         addRunningTask(taskId)
 
         // We used to log the time it takes to serialize the task, but task size is already
@@ -484,6 +487,7 @@ private[spark] class TaskSetManager(
           s"partition ${task.partitionId}, $taskLocality, ${serializedTask.limit()} bytes) " +
           s"taskResourceAssignments ${taskResourceAssignments}")
 
+            // TODO 汇报启动Task事件
         sched.dagScheduler.taskStarted(task, info)
         new TaskDescription(
           taskId,

@@ -74,6 +74,7 @@ private[spark] class ShuffleMapTask(
     if (locs == null) Nil else locs.distinct
   }
 
+  // TODO Spark非Sink类型Task都会转换成ShuffleMapTask
   override def runTask(context: TaskContext): MapStatus = {
     // Deserialize the RDD using the broadcast variable.
     val threadMXBean = ManagementFactory.getThreadMXBean

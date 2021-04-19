@@ -43,6 +43,7 @@ private[netty] class Dispatcher(nettyEnv: NettyRpcEnv, numUsableCores: Int) exte
     new ConcurrentHashMap[RpcEndpoint, RpcEndpointRef]
 
   private val shutdownLatch = new CountDownLatch(1)
+  // TODO 消息处理器
   private lazy val sharedLoop = new SharedMessageLoop(nettyEnv.conf, this, numUsableCores)
 
   /**

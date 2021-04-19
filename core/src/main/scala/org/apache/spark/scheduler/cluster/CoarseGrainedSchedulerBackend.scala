@@ -154,6 +154,7 @@ class CoarseGrainedSchedulerBackend(scheduler: TaskSchedulerImpl, val rpcEnv: Rp
                   r.release(v.addresses)
                 }
               }
+              // TODO 发送启动Task调用
               makeOffers(executorId)
             case None =>
               // Ignoring the update since we don't know about the executor.
@@ -198,6 +199,7 @@ class CoarseGrainedSchedulerBackend(scheduler: TaskSchedulerImpl, val rpcEnv: Rp
         executorDataMap.get(executorId).foreach { data =>
           data.freeCores = data.totalCores
         }
+        // TODO 发起启动Task调用
         makeOffers(executorId)
       case e =>
         logError(s"Received unexpected message. ${e}")
@@ -308,9 +310,11 @@ class CoarseGrainedSchedulerBackend(scheduler: TaskSchedulerImpl, val rpcEnv: Rp
                 (rName, rInfo.availableAddrs.toBuffer)
               }, executorData.resourceProfileId)
         }.toIndexedSeq
+        // TODO 检查资源？
         scheduler.resourceOffers(workOffers, true)
       }
       if (taskDescs.nonEmpty) {
+        // TODO 开始调度Task
         launchTasks(taskDescs)
       }
     }
@@ -337,12 +341,14 @@ class CoarseGrainedSchedulerBackend(scheduler: TaskSchedulerImpl, val rpcEnv: Rp
               executorData.resourcesInfo.map { case (rName, rInfo) =>
                 (rName, rInfo.availableAddrs.toBuffer)
               }, executorData.resourceProfileId))
+          // TODO 检查资源
           scheduler.resourceOffers(workOffers, false)
         } else {
           Seq.empty
         }
       }
       if (taskDescs.nonEmpty) {
+        // TODO 开始调度Task
         launchTasks(taskDescs)
       }
     }
@@ -380,6 +386,9 @@ class CoarseGrainedSchedulerBackend(scheduler: TaskSchedulerImpl, val rpcEnv: Rp
           logDebug(s"Launching task ${task.taskId} on executor id: ${task.executorId} hostname: " +
             s"${executorData.executorHost}.")
 
+          // TODO 发送启动Task的Rpc请求（完全基于Netty，没有像Flink/Dubbo一样通过动态代理封装成方法调用),
+          //   Executor方接收到Driver发送的Rpc消息后，根据LaunchTask事件类型判断出需要执行哪个方法，Flink也是通过
+          //   类似的方法判断需要执行哪个本地方法的，Dubbo则是通过ZK上的元数据判断需要执行哪个方法
           executorData.executorEndpoint.send(LaunchTask(new SerializableBuffer(serializedTask)))
         }
       }

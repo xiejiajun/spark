@@ -100,6 +100,7 @@ private[netty] class Inbox(val endpointName: String, val endpoint: RpcEndpoint)
         message match {
           case RpcMessage(_sender, content, context) =>
             try {
+              // TODO Rpc消息处理
               endpoint.receiveAndReply(context).applyOrElse[Any, Unit](content, { msg =>
                 throw new SparkException(s"Unsupported message $message from ${_sender}")
               })
@@ -112,6 +113,7 @@ private[netty] class Inbox(val endpointName: String, val endpoint: RpcEndpoint)
             }
 
           case OneWayMessage(_sender, content) =>
+            // TODO 触发消息处理
             endpoint.receive.applyOrElse[Any, Unit](content, { msg =>
               throw new SparkException(s"Unsupported message $message from ${_sender}")
             })

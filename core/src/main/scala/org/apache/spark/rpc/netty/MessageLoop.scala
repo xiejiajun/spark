@@ -38,6 +38,7 @@ private sealed abstract class MessageLoop(dispatcher: Dispatcher) extends Loggin
 
   // Message loop task; should be run in all threads of the message loop's pool.
   protected val receiveLoopRunnable = new Runnable() {
+    // TODO 处理消息
     override def run(): Unit = receiveLoop()
   }
 
@@ -72,6 +73,7 @@ private sealed abstract class MessageLoop(dispatcher: Dispatcher) extends Loggin
             setActive(MessageLoop.PoisonPill)
             return
           }
+          // TODO 处理消息请求
           inbox.process(dispatcher)
         } catch {
           case NonFatal(e) => logError(e.getMessage, e)
@@ -83,6 +85,7 @@ private sealed abstract class MessageLoop(dispatcher: Dispatcher) extends Loggin
           try {
             // Re-submit a receive task so that message delivery will still work if
             // UncaughtExceptionHandler decides to not kill JVM.
+            // TODO 重新启动消息处理器
             threadpool.execute(receiveLoopRunnable)
           } finally {
             throw t

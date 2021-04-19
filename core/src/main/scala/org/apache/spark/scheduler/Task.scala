@@ -107,6 +107,7 @@ private[spark] abstract class Task[T](
     }
 
     InputFileBlockHolder.initialize()
+    // TODO 设置Task上下文
     TaskContext.setTaskContext(context)
     taskThread = Thread.currentThread()
 
@@ -125,9 +126,11 @@ private[spark] abstract class Task[T](
       Option(taskAttemptId),
       Option(attemptNumber)).setCurrentContext()
 
+    // TODO Task启动回调
     plugins.foreach(_.onTaskStart())
 
     try {
+      // TODO 运行Task
       runTask(context)
     } catch {
       case e: Throwable =>

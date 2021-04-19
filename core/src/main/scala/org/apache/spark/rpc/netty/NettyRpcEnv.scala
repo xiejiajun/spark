@@ -58,6 +58,7 @@ private[netty] class NettyRpcEnv(
     conf.get(RPC_IO_THREADS).getOrElse(numUsableCores),
     role)
 
+  // TODO Rpc消息分发器，里面内置了消息处理器，不像Flink一样通过Netty的Handler实现，这里高度封装了
   private val dispatcher: Dispatcher = new Dispatcher(this, numUsableCores)
 
   private val streamManager = new NettyStreamManager(this)
@@ -138,6 +139,7 @@ private[netty] class NettyRpcEnv(
 
   def asyncSetupEndpointRefByURI(uri: String): Future[RpcEndpointRef] = {
     val addr = RpcEndpointAddress(uri)
+    // TODO 创建Netty Rpc Endpoint
     val endpointRef = new NettyRpcEndpointRef(conf, addr, this)
     val verifier = new NettyRpcEndpointRef(
       conf, RpcEndpointAddress(addr.rpcAddress, RpcEndpointVerifier.NAME), this)
@@ -157,6 +159,7 @@ private[netty] class NettyRpcEnv(
 
   private def postToOutbox(receiver: NettyRpcEndpointRef, message: OutboxMessage): Unit = {
     if (receiver.client != null) {
+      // TODO 发起Rpc调用
       message.sendWith(receiver.client)
     } else {
       require(receiver.address != null,
@@ -180,6 +183,7 @@ private[netty] class NettyRpcEnv(
         outboxes.remove(receiver.address)
         targetOutbox.stop()
       } else {
+        // TODO 使用公共客户端发起调用
         targetOutbox.send(message)
       }
     }
@@ -239,12 +243,14 @@ private[netty] class NettyRpcEnv(
           case Success(response) => onSuccess(response)
           case Failure(e) => onFailure(e)
         }(ThreadUtils.sameThread)
+        // TODO 发起本地调用(remoteAddr和本地地址相同)
         dispatcher.postLocalMessage(message, p)
       } else {
         val rpcMessage = RpcOutboxMessage(message.serialize(this),
           onFailure,
           (client, response) => onSuccess(deserialize[Any](client, response)))
         rpcMsg = Option(rpcMessage)
+        // TODO 发起远程Rpc调用
         postToOutbox(message.receiver, rpcMessage)
         promise.future.failed.foreach {
           case _: TimeoutException => rpcMessage.onTimeout()

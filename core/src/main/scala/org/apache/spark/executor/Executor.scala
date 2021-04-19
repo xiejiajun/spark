@@ -267,6 +267,7 @@ private[spark] class Executor(
   def launchTask(context: ExecutorBackend, taskDescription: TaskDescription): Unit = {
     val tr = new TaskRunner(context, taskDescription, plugins)
     runningTasks.put(taskDescription.taskId, tr)
+    // TODO 往线程池提交Task
     threadPool.execute(tr)
     if (decommissioned) {
       log.error(s"Launching a task while in decommissioned state.")
@@ -454,6 +455,7 @@ private[spark] class Executor(
 
         updateDependencies(
           taskDescription.addedFiles, taskDescription.addedJars, taskDescription.addedArchives)
+        // TODO 反序列化得到Task, taskDescription.serializedTask为序列化后的Task信息
         task = ser.deserialize[Task[Any]](
           taskDescription.serializedTask, Thread.currentThread.getContextClassLoader)
         task.localProperties = taskDescription.properties
@@ -489,6 +491,7 @@ private[spark] class Executor(
         } else 0L
         var threwException = true
         val value = Utils.tryWithSafeFinally {
+          // TODO 运行Task
           val res = task.run(
             taskAttemptId = taskId,
             attemptNumber = taskDescription.attemptNumber,
