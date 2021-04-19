@@ -80,6 +80,7 @@ private[spark] class ResultTask[T, U](
       threadMXBean.getCurrentThreadCpuTime
     } else 0L
     val ser = SparkEnv.get.closureSerializer.newInstance()
+    // TODO 反序列化得到RDD和func
     val (rdd, func) = ser.deserialize[(RDD[T], (TaskContext, Iterator[T]) => U)](
       ByteBuffer.wrap(taskBinary.value), Thread.currentThread.getContextClassLoader)
     _executorDeserializeTimeNs = System.nanoTime() - deserializeStartTimeNs
@@ -87,6 +88,7 @@ private[spark] class ResultTask[T, U](
       threadMXBean.getCurrentThreadCpuTime - deserializeStartCpuTime
     } else 0L
 
+    // TODO rdd.iterator触发用户定义的转换逻辑
     func(context, rdd.iterator(partition, context))
   }
 

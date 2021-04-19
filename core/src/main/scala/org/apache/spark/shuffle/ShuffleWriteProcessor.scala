@@ -56,6 +56,7 @@ private[spark] class ShuffleWriteProcessor extends Serializable with Logging {
         context,
         createMetricsReporter(context))
       writer.write(
+        // TODO 用户逻辑都在RDD中
         rdd.iterator(partition, context).asInstanceOf[Iterator[_ <: Product2[Any, Any]]])
       writer.stop(success = true).get
     } catch {

@@ -332,8 +332,10 @@ abstract class RDD[T: ClassTag](
    */
   final def iterator(split: Partition, context: TaskContext): Iterator[T] = {
     if (storageLevel != StorageLevel.NONE) {
+      // TODO 获取/计算一个RDD分区（这也是触发执行用户定义逻辑的入口), 最终在RDD.compute方法中触发用户逻辑
       getOrCompute(split, context)
     } else {
+      // TODO 从checkpoint恢复
       computeOrReadCheckpoint(split, context)
     }
   }
@@ -368,8 +370,10 @@ abstract class RDD[T: ClassTag](
   private[spark] def computeOrReadCheckpoint(split: Partition, context: TaskContext): Iterator[T] =
   {
     if (isCheckpointedAndMaterialized) {
+      // TODO 从Checkpoint读取
       firstParent[T].iterator(split, context)
     } else {
+      // TODO 调用具体RDD实现类的compute触发用户定义的Fn的执行得到转换后的RDD分区信息
       compute(split, context)
     }
   }
@@ -383,6 +387,7 @@ abstract class RDD[T: ClassTag](
     // This method is called on executors, so we need call SparkEnv.get instead of sc.env.
     SparkEnv.get.blockManager.getOrElseUpdate(blockId, storageLevel, elementClassTag, () => {
       readCachedBlock = false
+      // TODO 计算/从Checkpoint读取RDD分区信息
       computeOrReadCheckpoint(partition, context)
     }) match {
       // Block hit.
@@ -420,6 +425,16 @@ abstract class RDD[T: ClassTag](
    */
   def map[U: ClassTag](f: T => U): RDD[U] = withScope {
     val cleanF = sc.clean(f)
+    // TODO Spark的transform算子都将用户定义的函数封装在RDD实现类里面了，Flink是单独通过
+    //  UserCodeWrapper/StreamOperatorFactory包装用户实现的处理函数，然后将UserCodeWrapper/StreamOperatorFactory
+    //  对象传递到诸如SourceStreamTask等一系列Invoker接口的实现类的TaskConfig/StreamConfig对象中，最终序列化这些
+    //  XXXTask并传递到TM进行反序列化->Invoker接口反射执行。
+    //  而Spark是通过将RDD对象放在TaskDescription对象进行序列化，然后通过Netty发送到Executor（Spark的RPC也和Flink不一样，
+    //  他没有通过动态代理封装成接口调用的形式，而是类似于DolphinScheduler/Hera一样简单的Netty接口，自定义协议，然后根据接收到的
+    //  事件类型判断该调用本地的哪个方法来处理远程调用请求), Executor接收到请求后CoarseGrainedExecutorBackend.receive
+    //  -> 反序列化TaskDescription对象 -> Executor.launchTask -> ... -> TaskRunner.run -> Task.run
+    //  -> ShuffleMapTask/ResultTask.runTask -> rdd.iterator -> RDD.getOrCompute
+    //  -> RDD.computeOrReadCheckpoint -> RDD.compute(这里面就会触发用户编写的函数进行RDD分区数据转换了,可以看到这里没有反射调用)
     new MapPartitionsRDD[U, T](this, (_, _, iter) => iter.map(cleanF))
   }
 
