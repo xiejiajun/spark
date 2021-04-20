@@ -90,9 +90,11 @@ public class OneForOneBlockFetcher {
     }
     if (!transportConf.useOldFetchProtocol() && isShuffleBlocks(blockIds)) {
       this.blockIds = new String[blockIds.length];
+      // TODO 构建拉取指定应用的指定Executor上的指定blockIds的请求
       this.message = createFetchShuffleBlocksMsgAndBuildBlockIds(appId, execId, blockIds);
     } else {
       this.blockIds = blockIds;
+      // TODO 构建拉取指定应用的指定Executor上的指定blockIds的请求
       this.message = new OpenBlocks(appId, execId, blockIds);
     }
   }
@@ -187,6 +189,7 @@ public class OneForOneBlockFetcher {
     @Override
     public void onSuccess(int chunkIndex, ManagedBuffer buffer) {
       // On receipt of a chunk, pass it upwards as a block.
+      // TODO 数据拉取成功回调
       listener.onBlockFetchSuccess(blockIds[chunkIndex], buffer);
     }
 
@@ -215,6 +218,8 @@ public class OneForOneBlockFetcher {
           // reasonable due to higher level chunking in [[ShuffleBlockFetcherIterator]].
           for (int i = 0; i < streamHandle.numChunks; i++) {
             if (downloadFileManager != null) {
+              // TODO DownloadCallback的onComplete方法会触发数据拉取成功回调
+              //  (ShuffleBlockFetcherIterator.next里面定义的BlockFetchingListener接口匿名类)
               client.stream(OneForOneStreamManager.genStreamChunkId(streamHandle.streamId, i),
                 new DownloadCallback(i));
             } else {
@@ -267,6 +272,7 @@ public class OneForOneBlockFetcher {
 
     @Override
     public void onComplete(String streamId) throws IOException {
+      // TODO 数据拉取成功回调
       listener.onBlockFetchSuccess(blockIds[chunkIndex], channel.closeAndRead());
       if (!downloadFileManager.registerTempFileToClean(targetFile)) {
         targetFile.delete();

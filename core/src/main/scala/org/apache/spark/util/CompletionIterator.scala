@@ -33,6 +33,7 @@ abstract class CompletionIterator[ +A, +I <: Iterator[A]](sub: I) extends Iterat
       completed = true
       // reassign to release resources of highly resource consuming iterators early
       iter = Iterator.empty.asInstanceOf[I]
+      // TODO 迭代结束回调
       completion()
     }
     r
@@ -43,6 +44,7 @@ abstract class CompletionIterator[ +A, +I <: Iterator[A]](sub: I) extends Iterat
 
 private[spark] object CompletionIterator {
   def apply[A, I <: Iterator[A]](sub: I, completionFunction: => Unit) : CompletionIterator[A, I] = {
+    // TODO sub才是最底层的数据迭代器
     new CompletionIterator[A, I](sub) {
       def completion(): Unit = completionFunction
     }

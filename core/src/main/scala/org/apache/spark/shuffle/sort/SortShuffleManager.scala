@@ -118,7 +118,7 @@ private[spark] class SortShuffleManager(conf: SparkConf) extends ShuffleManager 
    * read from a range of map outputs(startMapIndex to endMapIndex-1, inclusive).
    * If endMapIndex=Int.MaxValue, the actual endMapIndex will be changed to the length of total map
    * outputs of the shuffle in `getMapSizesByExecutorId`.
-   *
+   * TODO Shuffle Reader
    * Called on executors by reduce tasks.
    */
   override def getReader[K, C](

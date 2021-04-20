@@ -210,6 +210,7 @@ final class ShuffleBlockFetcherIterator(
     while (iter.hasNext) {
       val result = iter.next()
       result match {
+          // TODO 指标更新
         case SuccessFetchResult(blockId, mapIndex, address, _, buf, _) =>
           if (address != blockManager.blockManagerId) {
             if (hostLocalBlocks.contains(blockId -> mapIndex)) {
@@ -223,6 +224,7 @@ final class ShuffleBlockFetcherIterator(
               shuffleMetrics.incRemoteBlocksFetched(1)
             }
           }
+          // TODO 释放数据
           buf.release()
         case _ =>
       }
@@ -258,6 +260,7 @@ final class ShuffleBlockFetcherIterator(
             // This needs to be released after use.
             buf.retain()
             remainingBlocks -= blockId
+            // TODO 将拉取结果发到结果缓存队列
             results.put(new SuccessFetchResult(BlockId(blockId), infoMap(blockId)._2,
               address, infoMap(blockId)._1, buf, remainingBlocks.isEmpty))
             logDebug("remainingBlocks: " + remainingBlocks)
@@ -276,9 +279,12 @@ final class ShuffleBlockFetcherIterator(
     // already encrypted and compressed over the wire(w.r.t. the related configs), we can just fetch
     // the data and write it to file directly.
     if (req.size > maxReqSizeShuffleToMem) {
+      // TODO 发送shuffle数据拉取调用, 数据较大，需要溢写到文件系统
+      //  ExternalBlockStoreClient.fetchBlocks/NettyBlockTransferService.fetchBlocks
       shuffleClient.fetchBlocks(address.host, address.port, address.executorId, blockIds.toArray,
         blockFetchingListener, this)
     } else {
+      // TODO 发生shuffle数据拉取调用，数据较小，可以直接缓存到内存
       shuffleClient.fetchBlocks(address.host, address.port, address.executorId, blockIds.toArray,
         blockFetchingListener, null)
     }
@@ -549,6 +555,7 @@ final class ShuffleBlockFetcherIterator(
       ", expected bytesInFlight = 0 but found bytesInFlight = " + bytesInFlight)
 
     // Send out initial requests for blocks, up to our maxBytesInFlight
+    // TODO 初始化时发生一次数据拉取请求
     fetchUpToMaxBytes()
 
     val numFetches = remoteRequests.size - fetchRequests.size
@@ -563,6 +570,7 @@ final class ShuffleBlockFetcherIterator(
     }
   }
 
+  // TODO 判断释放还有数据可拉取
   override def hasNext: Boolean = numBlocksProcessed < numBlocksToFetch
 
   /**
@@ -570,7 +578,7 @@ final class ShuffleBlockFetcherIterator(
    * underlying each InputStream will be freed by the cleanup() method registered with the
    * TaskCompletionListener. However, callers should close() these InputStreams
    * as soon as they are no longer needed, in order to release memory as early as possible.
-   *
+   * TODO 迭代器模式拉取shuffle数据
    * Throws a FetchFailedException if the next block could not be fetched.
    */
   override def next(): (BlockId, InputStream) = {
@@ -587,8 +595,10 @@ final class ShuffleBlockFetcherIterator(
     // then fetch it one more time if it's corrupt, throw FailureFetchResult if the second fetch
     // is also corrupt, so the previous stage could be retried.
     // For local shuffle block, throw FailureFetchResult for the first IOException.
+    // TODO 自旋拉取数据，不断重试保证拉取到数据
     while (result == null) {
       val startFetchWait = System.nanoTime()
+      // TODO 从队列里面去Shuffle数据网络拉取器拉取的数据
       result = results.take()
       val fetchWaitTime = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startFetchWait)
       shuffleMetrics.incFetchWaitTime(fetchWaitTime)
@@ -686,10 +696,12 @@ final class ShuffleBlockFetcherIterator(
       }
 
       // Send fetch requests up to maxBytesInFlight
+      // TODO 发生拉取数据的Rpc请求，拉取到的数据缓存到results队列
       fetchUpToMaxBytes()
     }
 
     currentResult = result.asInstanceOf[SuccessFetchResult]
+    // TODO 返回结果
     (currentResult.blockId,
       new BufferReleasingInputStream(
         input,
@@ -701,7 +713,14 @@ final class ShuffleBlockFetcherIterator(
   }
 
   def toCompletionIterator: Iterator[(BlockId, InputStream)] = {
+    // TODO CompletionIterator.next -> ShuffleBlockFetcherIterator.next
+    //  -> ShuffleBlockFetcherIterator.fetchUpToMaxBytes -> send -> sendRequest
+    //  -> ExternalBlockStoreClient/NettyBlockTransferService.fetchBlocks -> ...
+    //  -> OneForOneBlockFetcher.start -> TransportClient.sendRpc -> ...
+    //  -> BlockFetchingListener.onBlockFetchSuccess -> 数据缓存到results队列
+    //  -> ShuffleBlockFetcherIterator.next中的result = results.take()读取到数据
     CompletionIterator[(BlockId, InputStream), this.type](this,
+      // TODO 用于shuffle结束时清理数据
       onCompleteCallback.onComplete(context))
   }
 
@@ -714,9 +733,11 @@ final class ShuffleBlockFetcherIterator(
       for ((remoteAddress, defReqQueue) <- deferredFetchRequests) {
         while (isRemoteBlockFetchable(defReqQueue) &&
             !isRemoteAddressMaxedOut(remoteAddress, defReqQueue.front)) {
+          // TODO 获取拉取请求
           val request = defReqQueue.dequeue()
           logDebug(s"Processing deferred fetch request for $remoteAddress with "
             + s"${request.blocks.length} blocks")
+          // TODO 发送拉取请求
           send(remoteAddress, request)
           if (defReqQueue.isEmpty) {
             deferredFetchRequests -= remoteAddress
@@ -740,6 +761,7 @@ final class ShuffleBlockFetcherIterator(
     }
 
     def send(remoteAddress: BlockManagerId, request: FetchRequest): Unit = {
+      // TODO 发生Rpc请求
       sendRequest(request)
       numBlocksInFlightPerAddress(remoteAddress) =
         numBlocksInFlightPerAddress.getOrElse(remoteAddress, 0) + request.blocks.size

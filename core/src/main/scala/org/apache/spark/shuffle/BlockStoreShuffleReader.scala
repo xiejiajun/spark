@@ -41,6 +41,10 @@ private[spark] class BlockStoreShuffleReader[K, C](
 
   private val dep = handle.dependency
 
+  /**
+   * TODO 是否是批量拉取连续block
+   * @return
+   */
   private def fetchContinuousBlocksInBatch: Boolean = {
     val conf = SparkEnv.get.conf
     val serializerRelocatable = dep.serializer.supportsRelocationOfSerializedObjects
@@ -50,6 +54,7 @@ private[spark] class BlockStoreShuffleReader[K, C](
     } else {
       true
     }
+    // TODO shffule协议设置
     val useOldFetchProtocol = conf.get(config.SHUFFLE_USE_OLD_FETCH_PROTOCOL)
     // SPARK-34790: Fetching continuous blocks in batch is incompatible with io encryption.
     val ioEncryption = conf.get(config.IO_ENCRYPTION_ENABLED)
@@ -66,8 +71,10 @@ private[spark] class BlockStoreShuffleReader[K, C](
     doBatchFetch
   }
 
+  // TODO 从上游Shuffle实现的Reduce端读取数据
   /** Read the combined key-values for this reduce task */
   override def read(): Iterator[Product2[K, C]] = {
+    // TODO 构建拉取数据的迭代器，内部会发生Rpc请求拉取数据
     val wrappedStreams = new ShuffleBlockFetcherIterator(
       context,
       blockManager.blockStoreClient,
@@ -122,6 +129,7 @@ private[spark] class BlockStoreShuffleReader[K, C](
     }
 
     // Sort the output if there is a sort ordering defined.
+    // TODO 排序
     val resultIter = dep.keyOrdering match {
       case Some(keyOrd: Ordering[K]) =>
         // Create an ExternalSorter to sort the data.

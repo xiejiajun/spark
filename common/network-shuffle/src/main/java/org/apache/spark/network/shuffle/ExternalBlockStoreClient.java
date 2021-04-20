@@ -99,6 +99,7 @@ public class ExternalBlockStoreClient extends BlockStoreClient {
             // Unless this client is closed.
             if (clientFactory != null) {
               TransportClient client = clientFactory.createClient(host, port, maxRetries > 0);
+              // TODO 启动拉取器
               new OneForOneBlockFetcher(client, appId, execId,
                 inputBlockId, inputListener, conf, downloadFileManager).start();
             } else {
@@ -109,8 +110,10 @@ public class ExternalBlockStoreClient extends BlockStoreClient {
       if (maxRetries > 0) {
         // Note this Fetcher will correctly handle maxRetries == 0; we avoid it just in case there's
         // a bug in this code. We should remove the if statement once we're sure of the stability.
+        // TODO 启动重试拉取
         new RetryingBlockFetcher(conf, blockFetchStarter, blockIds, listener).start();
       } else {
+        // TODO 启动拉取
         blockFetchStarter.createAndStart(blockIds, listener);
       }
     } catch (Exception e) {
@@ -121,6 +124,14 @@ public class ExternalBlockStoreClient extends BlockStoreClient {
     }
   }
 
+  /**
+   * TODO 推送数据？
+   * @param host     the host of the remote node.
+   * @param port     the port of the remote node.
+   * @param blockIds block ids to be pushed
+   * @param buffers  buffers to be pushed
+   * @param listener the listener to receive block push status.
+   */
   @Override
   public void pushBlocks(
       String host,

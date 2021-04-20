@@ -93,6 +93,8 @@ class ShuffleDependency[K: ClassTag, V: ClassTag, C: ClassTag](
 
   val shuffleId: Int = _rdd.context.newShuffleId()
 
+  // TODO shuffle处理器实现 -> SortShuffleManager.registerShuffle
+  //  -> BypassMergeSortShuffleHandle/SerializedShuffleHandle/BaseShuffleHandle
   val shuffleHandle: ShuffleHandle = _rdd.context.env.shuffleManager.registerShuffle(
     shuffleId, this)
 
