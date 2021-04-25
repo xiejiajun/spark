@@ -105,6 +105,7 @@ class ExternalShuffleService(sparkConf: SparkConf, securityManager: SecurityMana
         Nil
       }
     transportContext = new TransportContext(transportConf, blockHandler, true)
+    // TODO 创建处理shuffle数据拉取请求的NettyServer
     server = transportContext.createServer(port, bootstraps.asJava)
 
     shuffleServiceSource.registerMetricSet(server.getAllMetrics)

@@ -563,7 +563,7 @@ private[spark] class DAGScheduler(
     checkBarrierStageWithDynamicAllocation(rdd)
     checkBarrierStageWithNumSlots(rdd, resourceProfile)
     checkBarrierStageWithRDDChainPattern(rdd, partitions.toSet.size)
-    // TODO 构建ParentStages
+    // TODO 构建ParentStages, 父依赖都是非Sink算子，所以都会被封装成ShuffleMapStage
     val parents = getOrCreateParentStages(shuffleDeps, jobId)
     val id = nextStageId.getAndIncrement()
     val stage = new ResultStage(id, rdd, func, partitions, parents, jobId,
@@ -830,7 +830,9 @@ private[spark] class DAGScheduler(
     assert(partitions.nonEmpty)
     val func2 = func.asInstanceOf[(TaskContext, Iterator[_]) => _]
     val waiter = new JobWaiter[U](this, jobId, partitions.size, resultHandler)
-    // TODO 提交作业
+    // TODO 提交作业: JobSubmitted事件最终由DAGSchedulerEventProcessLoop.doOnReceive处理
+    //  将JobSubmitted事件放到EventLoop的eventQueue队列里面等待eventThread线程调用
+    //  DAGSchedulerEventProcessLoop#onReceive方法处理
     eventProcessLoop.post(JobSubmitted(
       jobId, rdd, func2, partitions.toArray, callSite, waiter,
       Utils.cloneProperties(properties)))
@@ -859,6 +861,7 @@ private[spark] class DAGScheduler(
       resultHandler: (Int, U) => Unit,
       properties: Properties): Unit = {
     val start = System.nanoTime
+    // TODO 提交Job
     val waiter = submitJob(rdd, func, partitions, callSite, resultHandler, properties)
     ThreadUtils.awaitReady(waiter.completionFuture, Duration.Inf)
     waiter.completionFuture.value.get match {
@@ -1116,7 +1119,7 @@ private[spark] class DAGScheduler(
     try {
       // New stage creation may throw an exception if, for example, jobs are run on a
       // HadoopRDD whose underlying HDFS files have been deleted.
-      // TODO 根据finalRDD构建Stage
+      // TODO 根据finalRDD构建Stage：将RDD解析成由ShuffleMapStage和ResultStage组成的DAG
       finalStage = createResultStage(finalRDD, func, partitions, jobId, callSite)
     } catch {
       case e: BarrierJobSlotsNumberCheckFailed =>
@@ -1170,7 +1173,7 @@ private[spark] class DAGScheduler(
     listenerBus.post(
       SparkListenerJobStart(job.jobId, jobSubmissionTime, stageInfos,
         Utils.cloneProperties(properties)))
-    // TODO 提交TaskSet
+    // TODO 提交TaskSet(Stage就是TaskSet的逻辑表达)
     submitStage(finalStage)
   }
 
@@ -1230,9 +1233,11 @@ private[spark] class DAGScheduler(
         logDebug("missing: " + missing)
         if (missing.isEmpty) {
           logInfo("Submitting " + stage + " (" + stage.rdd + "), which has no missing parents")
+          // TODO 提交父依赖完成的stage
           submitMissingTasks(stage, jobId.get)
         } else {
           for (parent <- missing) {
+            // TODO 递归提交父依赖
             submitStage(parent)
           }
           waitingStages += stage
@@ -1319,7 +1324,7 @@ private[spark] class DAGScheduler(
     // event.
     stage match {
       case s: ShuffleMapStage =>
-        // TODO 调度Stage
+        // TODO Stage状态更新为启动状态
         outputCommitCoordinator.stageStart(stage = s.id, maxPartitionId = s.numPartitions - 1)
         // Only generate merger location for a given shuffle dependency once. This way, even if
         // this stage gets retried, it would still be merging blocks using the same set of
@@ -1396,7 +1401,7 @@ private[spark] class DAGScheduler(
         logWarning(s"Broadcasting large task binary with size " +
           s"${Utils.bytesToString(taskBinaryBytes.length)}")
       }
-      // TODO 广播序列化后的Task
+      // TODO 广播序列化后的Task到所有Executor
       taskBinary = sc.broadcast(taskBinaryBytes)
     } catch {
       // In the case of a failure during serialization, abort the stage.

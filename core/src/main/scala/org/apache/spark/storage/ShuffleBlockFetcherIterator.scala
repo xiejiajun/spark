@@ -733,7 +733,7 @@ final class ShuffleBlockFetcherIterator(
       for ((remoteAddress, defReqQueue) <- deferredFetchRequests) {
         while (isRemoteBlockFetchable(defReqQueue) &&
             !isRemoteAddressMaxedOut(remoteAddress, defReqQueue.front)) {
-          // TODO 获取拉取请求
+          // TODO 获取拉取请求 FetchRequest
           val request = defReqQueue.dequeue()
           logDebug(s"Processing deferred fetch request for $remoteAddress with "
             + s"${request.blocks.length} blocks")

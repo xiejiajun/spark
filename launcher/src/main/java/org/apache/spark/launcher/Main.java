@@ -59,6 +59,7 @@ class Main {
     List<String> cmd;
     if (className.equals("org.apache.spark.deploy.SparkSubmit")) {
       try {
+        // TODO 用于构建spark-submit/spark-shell/sparkR/pyspark等提交Job时的任务提交命令
         AbstractCommandBuilder builder = new SparkSubmitCommandBuilder(args);
         cmd = buildCommand(builder, env, printLaunchCommand);
       } catch (IllegalArgumentException e) {
@@ -83,6 +84,8 @@ class Main {
         cmd = buildCommand(builder, env, printLaunchCommand);
       }
     } else {
+      // TODO 用于生成Master, Worker, HistoryServer, ExternalShuffleService, MesosClusterDispatcher
+      //  等服务启动命令
       AbstractCommandBuilder builder = new SparkClassCommandBuilder(className, args);
       cmd = buildCommand(builder, env, printLaunchCommand);
     }
@@ -103,6 +106,7 @@ class Main {
   }
 
   /**
+   * TODO 组装真正的Job提交命令
    * Prepare spark commands with the appropriate command builder.
    * If printLaunchCommand is set then the commands will be printed to the stderr.
    */

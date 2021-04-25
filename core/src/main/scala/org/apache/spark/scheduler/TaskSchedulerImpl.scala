@@ -236,7 +236,7 @@ private[spark] class TaskSchedulerImpl(
     logInfo("Adding task set " + taskSet.id + " with " + tasks.length + " tasks "
       + "resource profile " + taskSet.resourceProfileId)
     this.synchronized {
-      // TODO 创建用于提交Task的TaskSet管理器
+      // TODO 创建用于跟踪Task状态的TaskSet管理器
       val manager = createTaskSetManager(taskSet, maxTaskFailures)
       val stage = taskSet.stageId
       val stageTaskSets =
@@ -255,6 +255,7 @@ private[spark] class TaskSchedulerImpl(
         ts.isZombie = true
       }
       stageTaskSets(taskSet.stageAttemptId) = manager
+      // TODO 将TaskSetManager添加到FIFO/FAIR调度池里面
       schedulableBuilder.addTaskSetManager(manager, manager.taskSet.properties)
 
       if (!isLocal && !hasReceivedTask) {
@@ -272,6 +273,7 @@ private[spark] class TaskSchedulerImpl(
       }
       hasReceivedTask = true
     }
+    // TODO 发送触发作业调度的ReviveOffers事件, CoarseGrainedSchedulerBackend.reviveOffers
     backend.reviveOffers()
   }
 
@@ -394,11 +396,12 @@ private[spark] class TaskSchedulerImpl(
           try {
             val prof = sc.resourceProfileManager.resourceProfileFromId(taskSetRpID)
             val taskCpus = ResourceProfile.getTaskCpusOrDefaultForProfile(prof, conf)
-            // TODO 构建Task描述信息
+            // TODO 构建Task描述信息, 构建TaskDescription, 必看
             val (taskDescOption, didReject) =
               taskSet.resourceOffer(execId, host, maxLocality, taskResAssignments)
             noDelayScheduleRejects &= !didReject
             for (task <- taskDescOption) {
+              // TODO 将TaskDescription添加到tasks序列
               tasks(i) += task
               val tid = task.taskId
               val locality = taskSet.taskInfos(task.taskId).taskLocality
@@ -526,6 +529,7 @@ private[spark] class TaskSchedulerImpl(
       }
     }.getOrElse(offers)
 
+    // TODO 随机打散
     val shuffledOffers = shuffleOffers(filteredOffers)
     // Build a list of tasks to assign to each worker.
     // Note the size estimate here might be off with different ResourceProfiles but should be
@@ -534,6 +538,7 @@ private[spark] class TaskSchedulerImpl(
     val availableResources = shuffledOffers.map(_.resources).toArray
     val availableCpus = shuffledOffers.map(o => o.cores).toArray
     val resourceProfileIds = shuffledOffers.map(o => o.resourceProfileId).toArray
+    // TODO 获取排好序的TaskSetManager列表
     val sortedTaskSets = rootPool.getSortedTaskSetQueue
     for (taskSet <- sortedTaskSets) {
       logDebug("parentName: %s, name: %s, runningTasks: %s".format(
@@ -556,6 +561,7 @@ private[spark] class TaskSchedulerImpl(
           // task resource requests
           resourceMap.map { case (name, addresses) => (name, addresses.length) }
         }
+        // TODO 计算可以槽位
         calculateAvailableSlots(this, conf, rpId, resourceProfileIds, availableCpus,
           availableResourcesAmount)
       } else {
@@ -575,9 +581,11 @@ private[spark] class TaskSchedulerImpl(
         var globalMinLocality: Option[TaskLocality] = None
         // Record all the executor IDs assigned barrier tasks on.
         val addressesWithDescs = ArrayBuffer[(String, TaskDescription)]()
+        // TODO 具有数据本地性优势的Task处理
         for (currentMaxLocality <- taskSet.myLocalityLevels) {
           var launchedTaskAtCurrentMaxLocality = false
           do {
+            // TODO 这里面会有将TaskSet解析成一个个TaskDescription并添加到tasks列表的逻辑
             val (noDelayScheduleReject, minLocality) = resourceOfferSingleTaskSet(
               taskSet, currentMaxLocality, shuffledOffers, availableCpus,
               availableResources, tasks, addressesWithDescs)

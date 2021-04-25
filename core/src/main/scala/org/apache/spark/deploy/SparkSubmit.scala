@@ -87,6 +87,7 @@ private[spark] class SparkSubmit extends Logging {
       logInfo(appArgs.toString)
     }
     appArgs.action match {
+        // TODO 提交任务
       case SparkSubmitAction.SUBMIT => submit(appArgs, uninitLog)
       case SparkSubmitAction.KILL => kill(appArgs)
       case SparkSubmitAction.REQUEST_STATUS => requestStatus(appArgs)
@@ -177,6 +178,7 @@ private[spark] class SparkSubmit extends Logging {
             }
         }
       } else {
+        // TODO 提交Job
         runMain(args, uninitLog)
       }
     }
@@ -200,6 +202,7 @@ private[spark] class SparkSubmit extends Logging {
       }
     // In all other modes, just run the main class as prepared
     } else {
+      // TODO On Yarn模式从这里提交
       doRunMain()
     }
   }
@@ -913,6 +916,7 @@ private[spark] class SparkSubmit extends Logging {
     var mainClass: Class[_] = null
 
     try {
+      // TODO 获取用户开发的主类
       mainClass = Utils.classForName(childMainClass)
     } catch {
       case e: ClassNotFoundException =>
@@ -932,8 +936,10 @@ private[spark] class SparkSubmit extends Logging {
     }
 
     val app: SparkApplication = if (classOf[SparkApplication].isAssignableFrom(mainClass)) {
+      // TODO 如果主类是SparkApplication的子类则直接转换
       mainClass.getConstructor().newInstance().asInstanceOf[SparkApplication]
     } else {
+      // TODO 不是SparkApplication的子类时使用主类构建JavaMainApplication
       new JavaMainApplication(mainClass)
     }
 
@@ -948,6 +954,7 @@ private[spark] class SparkSubmit extends Logging {
     }
 
     try {
+      // TODO 重点：用户代码的执行入口
       app.start(childArgs.toArray, sparkConf)
     } catch {
       case t: Throwable =>
@@ -1006,6 +1013,7 @@ object SparkSubmit extends CommandLineUtils with Logging {
     "org.apache.spark.deploy.k8s.submit.KubernetesClientApplication"
 
   override def main(args: Array[String]): Unit = {
+    // TODO Spark应用提交的真正入口
     val submit = new SparkSubmit() {
       self =>
 
@@ -1027,6 +1035,7 @@ object SparkSubmit extends CommandLineUtils with Logging {
 
       override def doSubmit(args: Array[String]): Unit = {
         try {
+          // TODO SparkSubmit.doSubmit
           super.doSubmit(args)
         } catch {
           case e: SparkUserAppException =>
@@ -1036,6 +1045,7 @@ object SparkSubmit extends CommandLineUtils with Logging {
 
     }
 
+    // TODO 提交应用
     submit.doSubmit(args)
   }
 

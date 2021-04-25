@@ -1689,6 +1689,7 @@ private[spark] class BlockManager(
         // block when it finishes sending the message.
         val buffer = new BlockManagerManagedBuffer(blockInfoManager, blockId, data, false,
           unlockOnDeallocate = false)
+        // TODO 上层数据到Shuffle服务
         blockTransferService.uploadBlockSync(
           peer.host,
           peer.port,

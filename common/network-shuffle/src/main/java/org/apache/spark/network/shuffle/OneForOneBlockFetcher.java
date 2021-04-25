@@ -207,6 +207,8 @@ public class OneForOneBlockFetcher {
    * {@link StreamHandle}. We will send all fetch requests immediately, without throttling.
    */
   public void start() {
+    // TODO message类型是FetchShuffleBlocks/OpenBlocks, 对应的被拉取方通过
+    //  ExternalBlockHandler.handleMessage处理该请求
     client.sendRpc(message.toByteBuffer(), new RpcResponseCallback() {
       @Override
       public void onSuccess(ByteBuffer response) {

@@ -163,6 +163,7 @@ public class ExternalBlockHandler extends RpcHandler {
             client.getClientId(),
             getRemoteAddress(client.getChannel()));
         }
+        // TODO 响应数据给调用方
         callback.onSuccess(new StreamHandle(streamId, numBlockIds).toByteBuffer());
       } finally {
         responseDelayContext.stop();

@@ -476,7 +476,7 @@ private[spark] class TaskSetManager(
             s"(${serializedTask.limit() / 1024} KiB). The maximum recommended task size is " +
             s"${TaskSetManager.TASK_SIZE_TO_WARN_KIB} KiB.")
         }
-            // TODO 添加到Running队列等待自动调度
+        // TODO 添加到Running队列等待自动调度
         addRunningTask(taskId)
 
         // We used to log the time it takes to serialize the task, but task size is already
@@ -489,6 +489,8 @@ private[spark] class TaskSetManager(
 
             // TODO 汇报启动Task事件
         sched.dagScheduler.taskStarted(task, info)
+
+        // TODO 构建描述Task信息的TaskDescription对象
         new TaskDescription(
           taskId,
           attemptNum,

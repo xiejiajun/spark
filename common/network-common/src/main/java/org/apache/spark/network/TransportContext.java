@@ -186,6 +186,7 @@ public class TransportContext implements Closeable {
       SocketChannel channel,
       RpcHandler channelRpcHandler) {
     try {
+      // TODO 创建处理请求的handler
       TransportChannelHandler channelHandler = createChannelHandler(channel, channelRpcHandler);
       ChannelPipeline pipeline = channel.pipeline()
         .addLast("encoder", ENCODER)
@@ -227,6 +228,7 @@ public class TransportContext implements Closeable {
     }
     TransportRequestHandler requestHandler = new TransportRequestHandler(channel, client,
       rpcHandler, conf.maxChunksBeingTransferred(), chunkFetchRequestHandler);
+    // TODO 处理请求的Handler
     return new TransportChannelHandler(client, responseHandler, requestHandler,
       conf.connectionTimeoutMs(), separateChunkFetchRequest, closeIdleConnections, this);
   }
