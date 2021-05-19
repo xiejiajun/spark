@@ -161,6 +161,8 @@ object Encoders {
    *
    * @since 1.6.0
    */
+  // TODO [T: ClassTag]是Scala范型的上下文界定， 这种类型的范围界定会在方法内部接收一个隐式变量
+  //  这里是T => ClassTag[T]转换得到的ClassTag[T]隐式变量
   def kryo[T: ClassTag]: Encoder[T] = genericSerializer(useKryo = true)
 
   /**
@@ -183,6 +185,8 @@ object Encoders {
    *
    * @since 1.6.0
    */
+    // TODO [T: ClassTag]是Scala范型的上下文界定， 这种类型的范围界定会在方法内部接收一个隐式变量
+    //  这里是T => ClassTag[T]转换得到的ClassTag[T]类型的隐式变量
   def javaSerialization[T: ClassTag]: Encoder[T] = genericSerializer(useKryo = false)
 
   /**
@@ -221,6 +225,12 @@ object Encoders {
       objDeserializer =
         DecodeUsingSerializer[T](
           Cast(GetColumnByOrdinal(0, BinaryType), BinaryType),
+          // TODO classTag函数会接收一个ClassTag[T]类型的隐式变量，刚好对应外层的
+          //  javaSerialization[T: ClassTag] / kryo[T: ClassTag]范型上下文界定方法内部
+          //  自动接收ClassTag[T]类型隐式变量的约定，又由于Scala隐式变量都是支持使用显式参数覆盖的
+          //  所以javaSerialization[T: ClassTag] / kryo[T: ClassTag]这两个方法虽然没有定义
+          //  参数，但是他们还是支持传递一个ClassTag[T]类型的参数给隐式参数接收方的
+          //  （这里是classTag[T]函数）
           classTag[T],
           kryo = useKryo),
       clsTag = classTag[T]
