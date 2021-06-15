@@ -554,6 +554,7 @@ class SparkContext(config: SparkConf) extends Logging {
     _plugins = PluginContainer(this, _resources.asJava)
 
     // Create and start the scheduler
+    // TODO Yarn client模式的AM就是这里创建出来的sched.start里面提交的
     val (sched, ts) = SparkContext.createTaskScheduler(this, master, deployMode)
     _schedulerBackend = sched
     _taskScheduler = ts
@@ -576,6 +577,7 @@ class SparkContext(config: SparkConf) extends Logging {
 
     // start TaskScheduler after taskScheduler sets DAGScheduler reference in DAGScheduler's
     // constructor
+    // TODO 启动TaskScheduler: 重点，Yarn client模式的AM就是这里触发YarnClientSchedulerBackend.start进行提交的
     _taskScheduler.start()
 
     _applicationId = _taskScheduler.applicationId()
@@ -2682,6 +2684,7 @@ object SparkContext extends Logging {
     // from assertNoOtherContextIsRunning within setActiveContext
     SPARK_CONTEXT_CONSTRUCTOR_LOCK.synchronized {
       if (activeContext.get() == null) {
+        // TODO new SparkContext -> cm.createSchedulerBackend会触发yarn client模式用于创建Executor的AM提交到Yarn
         setActiveContext(new SparkContext(config))
       } else {
         if (config.getAll.nonEmpty) {
@@ -2704,6 +2707,7 @@ object SparkContext extends Logging {
   def getOrCreate(): SparkContext = {
     SPARK_CONTEXT_CONSTRUCTOR_LOCK.synchronized {
       if (activeContext.get() == null) {
+        // TODO new SparkContext -> cm.createSchedulerBackend会触发yarn client模式用于创建Executor的AM提交到Yarn
         setActiveContext(new SparkContext())
       }
       activeContext.get()
@@ -2965,7 +2969,12 @@ object SparkContext extends Logging {
         }
         try {
           val scheduler = cm.createTaskScheduler(sc, masterUrl)
+          // TODO 这里可能创建出YarnClientSchedulerBackend，YarnClientSchedulerBackend会提交AM ExecutorLauncher
+          //  用于为yarn client模式启动Executor并绑定appId
+          //  也可能初始化YarnClusterSchedulerBackend, 绑定appId
           val backend = cm.createSchedulerBackend(sc, masterUrl, scheduler)
+          // TODO 将YarnClientSchedulerBackend/YarnClusterSchedulerBackend设置到
+          //  YarnClusterScheduler/YarnScheduler的父类TaskSchedulerImpl的backend字段
           cm.initialize(scheduler, backend)
           (backend, scheduler)
         } catch {

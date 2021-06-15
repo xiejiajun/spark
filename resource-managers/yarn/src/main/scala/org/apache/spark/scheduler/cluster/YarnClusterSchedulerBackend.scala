@@ -29,8 +29,11 @@ private[spark] class YarnClusterSchedulerBackend(
 
   override def start(): Unit = {
     val attemptId = ApplicationMaster.getAttemptId
+    // TODO 设置applicationId和attemptId
     bindToYarn(attemptId.getApplicationId(), Some(attemptId))
+    // TODO CoarseGrainedSchedulerBackend.start
     super.start()
+    // TODO 获取executor数量
     totalExpectedExecutors = SchedulerBackendUtils.getInitialTargetExecutorNumber(sc.conf)
     startBindings()
   }

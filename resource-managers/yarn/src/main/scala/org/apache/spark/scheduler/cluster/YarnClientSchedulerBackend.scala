@@ -45,6 +45,7 @@ private[spark] class YarnClientSchedulerBackend(
    * This waits until the application is running.
    */
   override def start(): Unit = {
+    // TODO CoarseGrainedSchedulerBackend.start
     super.start()
 
     val driverHost = conf.get(config.DRIVER_HOST_ADDRESS)
@@ -58,11 +59,16 @@ private[spark] class YarnClientSchedulerBackend(
     logDebug("ClientArguments called with: " + argsArrayBuf.mkString(" "))
     val args = new ClientArguments(argsArrayBuf.toArray)
     totalExpectedExecutors = SchedulerBackendUtils.getInitialTargetExecutorNumber(conf)
+    // TODO org.apache.spark.deploy.yarn.Client
     client = new Client(args, conf, sc.env.rpcEnv)
+    // TODO org.apache.spark.deploy.yarn.Client.submitApplication提交用于创建和跟踪Executor生命周期的AM
+    //  , 跟yarn cluster入口一致，创建AM后返回ApplicationId并保存
     bindToYarn(client.submitApplication(), None)
 
+    // TODO 等待应用状态到RUNNING
     waitForApplication()
 
+    // TODO 启动一个线程监听任务执行情况直到任务退出
     monitorThread = asyncMonitorApplication()
     monitorThread.start()
 

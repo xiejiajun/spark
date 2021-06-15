@@ -162,6 +162,7 @@ public abstract class AbstractLauncher<T extends AbstractLauncher<T>> {
   public T addSparkArg(String name, String value) {
     SparkSubmitOptionParser validator = new ArgumentValidator(true);
     if (validator.MASTER.equals(name)) {
+      // TODO 设置spark.master
       setMaster(value);
     } else if (validator.PROPERTIES_FILE.equals(name)) {
       setPropertiesFile(value);

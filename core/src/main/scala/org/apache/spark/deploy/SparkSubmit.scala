@@ -230,6 +230,7 @@ private[spark] class SparkSubmit extends Logging {
     val sparkConf = args.toSparkConf()
     var childMainClass = ""
 
+    // TODO 根据spark.master判断部署模式
     // Set the cluster manager
     val clusterManager: Int = args.master match {
       case "yarn" => YARN
@@ -251,6 +252,7 @@ private[spark] class SparkSubmit extends Logging {
         -1
     }
 
+    // TODO spark on yarn cluster模式，保证入口类YarnClusterApplication存在
     if (clusterManager == YARN) {
       // Make sure YARN is included in our build if we're trying to use it
       if (!Utils.classIsLoadable(YARN_CLUSTER_SUBMIT_CLASS) && !Utils.isTesting) {
@@ -660,6 +662,7 @@ private[spark] class SparkSubmit extends Logging {
     // In client mode, launch the application main class directly
     // In addition, add the main application jar and any added jars (if any) to the classpath
     if (deployMode == CLIENT) {
+      // TODO yarn 或者其他模式的client模式，直接将主类(Driver）作为在本地启动的启动入口
       childMainClass = args.mainClass
       if (localPrimaryResource != null && isUserJar(localPrimaryResource)) {
         childClasspath += localPrimaryResource
@@ -672,6 +675,7 @@ private[spark] class SparkSubmit extends Logging {
     // to local by configuring "spark.yarn.dist.forceDownloadSchemes", otherwise it will not be
     // added to the classpath of YARN client.
     if (isYarnCluster) {
+      // TODO yarn cluster模式依赖拼接
       if (isUserJar(args.primaryResource)) {
         childClasspath += args.primaryResource
       }
@@ -716,6 +720,7 @@ private[spark] class SparkSubmit extends Logging {
 
     // In standalone cluster mode, use the REST client to submit the application (Spark 1.3+).
     // All Spark parameters are expected to be passed to the client through system properties.
+    // TODO standalone模式提交
     if (args.isStandaloneCluster) {
       if (args.useRest) {
         childMainClass = REST_CLUSTER_SUBMIT_CLASS
@@ -748,6 +753,7 @@ private[spark] class SparkSubmit extends Logging {
 
     // In yarn-cluster mode, use yarn.Client as a wrapper around the user class
     if (isYarnCluster) {
+      // TODO yarn cluster模式的本地启动类指定为YarnClusterApplication
       childMainClass = YARN_CLUSTER_SUBMIT_CLASS
       if (args.isPython) {
         childArgs += ("--primary-py-file", args.primaryResource)
@@ -760,6 +766,7 @@ private[spark] class SparkSubmit extends Logging {
         if (args.primaryResource != SparkLauncher.NO_RESOURCE) {
           childArgs += ("--jar", args.primaryResource)
         }
+        // TODO 指定用户的mainClass
         childArgs += ("--class", args.mainClass)
       }
       if (args.childArgs != null) {
@@ -916,7 +923,7 @@ private[spark] class SparkSubmit extends Logging {
     var mainClass: Class[_] = null
 
     try {
-      // TODO 获取用户开发的主类
+      // TODO 获取用户开发的主类(Yarn Client模式是用户开发的主类, Yarn Cluster模式是YarnClusterApplication)
       mainClass = Utils.classForName(childMainClass)
     } catch {
       case e: ClassNotFoundException =>
@@ -936,10 +943,10 @@ private[spark] class SparkSubmit extends Logging {
     }
 
     val app: SparkApplication = if (classOf[SparkApplication].isAssignableFrom(mainClass)) {
-      // TODO 如果主类是SparkApplication的子类则直接转换
+      // TODO 如果主类是SparkApplication的子类则直接转换(比如Yarn Cluster模式的入口YarnClusterApplication就走这里)
       mainClass.getConstructor().newInstance().asInstanceOf[SparkApplication]
     } else {
-      // TODO 不是SparkApplication的子类时使用主类构建JavaMainApplication
+      // TODO 不是SparkApplication的子类时使用主类构建JavaMainApplication（比如Yarn Client模式的
       new JavaMainApplication(mainClass)
     }
 

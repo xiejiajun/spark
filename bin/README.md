@@ -6,10 +6,11 @@
 -> SparkSubmitCommandBuilder#buildSparkSubmitCommand -> SparkSubmit 
 -> SparkSubmit.main -> SparkSubmit.doSubmit(overwrite的那个) -> SparkSubmit#doSubmit
 -> SparkSubmit#submit -> SparkSubmit#submit.doRunMain -> SparkSubmit#runMain
--> JavaMainApplication#start -> 反射执行用户的main方法 -> 用户main方法中的rdd_action算子 -> SparkContext.runJob
+-> JavaMainApplication#start(Yarn Client模式)/ [YarnClusterApplication.start -> Client#run (Yarn Cluster模式)] -> 反射执行用户的main方法 -> 用户main方法中的rdd_action算子 -> SparkContext.runJob
 -> DAGScheduler#runJob -> DAGScheduler#submitJob -> EventLoop#post(JobSubmitted) 
 -> 将JobSubmitted事件放到EventLoop的eventQueue队列里面等待eventThread线程调用DAGSchedulerEventProcessLoop#onReceive方法处理
--.-> EventLoop.eventThread.run(该线程启动流程new SparkContext -> SparkContext._dagScheduler -> new DAGScheduler -> eventProcessLoop.start -> org.apache.spark.util.EventLoop#start -> eventThread.start) -> DAGSchedulerEventProcessLoop#onReceive -> DAGSchedulerEventProcessLoop#doOnReceive
+-.-> EventLoop.eventThread.run(该线程启动流程为：new SparkContext -> SparkContext.createTaskScheduler提交yarn client模式下用于启动和管理Executor生命周期的AM
+-> SparkContext._dagScheduler -> new DAGScheduler -> eventProcessLoop.start -> org.apache.spark.util.EventLoop#start -> eventThread.start) -> DAGSchedulerEventProcessLoop#onReceive -> DAGSchedulerEventProcessLoop#doOnReceive
 -> DAGScheduler#handleJobSubmitted -> DAGScheduler#createResultStage(RDD => Stage依赖树) 
 -> DAGScheduler#submitStage -> DAGScheduler#submitMissingTasks 
 -> 调用closureSerializer.serialize & JavaUtils.bufferToArray 序列化Stage对象并通过SparkContext.broadcast广播到所有Executor
@@ -24,6 +25,12 @@
 -> TaskRunner#run -> Task#run -> ShuffleMapTask/ResultTask#runTask这样就把Task运行起来了
 -> ... -> RDD#iterator: RDD封装的数据处理逻辑执行入口 -> ... -> RDD#computeOrReadCheckpoint
 -> RDD#compute: 具体RDD实现的compute方法，里面会调用用户编写的逻辑, 详细分析请看MapPartitionsRDD.compute,其他RDD实现也一样
+
+---
+- Spark On Yarn Cluster模式： ... -> SparkSubmit#runMain -> YarnClusterApplication.start -> Client#run -> Client#submitApplication
+  -> Client#createContainerLaunchContext:构建AM容器启动命令，指定ApplicationMaster为AM启动类，并通过--class在AM容器中指定Driver入口类 -> yarnClient.submitApplication ->
+  -> ApplicationMaster.main -> ApplicationMaster.run -> ApplicationMaster.runDriver -> ApplicationMaster.startUserApplication -> mainMethod.invoke: 执行用户代码（启动Driver)
+  ->Client#monitorApplication: 如果不是cluster模式或者WAIT_FOR_APP_COMPLETION为false才会执行到这个分支等待执行结果
 
 ---
 - ShuffledRDD比较特殊，他是官方实现的用于Task之间数据交换的RDD， 它的compute方法实现了Task之间数据交换的逻辑：BlockStoreShuffleReader.read 

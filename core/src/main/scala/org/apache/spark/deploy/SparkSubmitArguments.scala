@@ -149,6 +149,7 @@ private[deploy] class SparkSubmitArguments(args: Seq[String], env: Map[String, S
    * Load arguments from environment variables, Spark properties etc.
    */
   private def loadEnvironmentArguments(): Unit = {
+    // TODO 加载spark.master
     master = Option(master)
       .orElse(sparkProperties.get("spark.master"))
       .orElse(env.get("MASTER"))
@@ -214,6 +215,7 @@ private[deploy] class SparkSubmitArguments(args: Seq[String], env: Map[String, S
     master = Option(master).getOrElse("local[*]")
 
     // In YARN mode, app name can be set via SPARK_YARN_APP_NAME (see SPARK-5222)
+    // TODO spark on yarn模式
     if (master.startsWith("yarn")) {
       name = Option(name).orElse(env.get("SPARK_YARN_APP_NAME")).orNull
     }
@@ -264,6 +266,7 @@ private[deploy] class SparkSubmitArguments(args: Seq[String], env: Map[String, S
       error("Number of executors must be a positive number")
     }
 
+    // TODO spark on Yarn模式配置校验
     if (master.startsWith("yarn")) {
       val hasHadoopEnv = env.contains("HADOOP_CONF_DIR") || env.contains("YARN_CONF_DIR")
       if (!hasHadoopEnv && !Utils.isTesting) {

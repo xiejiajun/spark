@@ -56,6 +56,7 @@ import org.apache.spark.scheduler.cluster.CoarseGrainedClusterMessages._
 import org.apache.spark.util._
 
 /**
+ * TODO Yarn Cluster模式的AM实现类（AM容器的启动入口)
  * Common application master functionality for Spark on Yarn.
  */
 private[spark] class ApplicationMaster(
@@ -96,6 +97,7 @@ private[spark] class ApplicationMaster(
     }
   }
 
+  // TODO 连接RM的RPC客户端
   private val client = new YarnRMClient()
 
   // Default to twice the number of executors (twice the maximum number of executors if dynamic
@@ -265,8 +267,11 @@ private[spark] class ApplicationMaster(
       }
 
       if (isClusterMode) {
+        // Yarn Cluster模式走这里
         runDriver()
       } else {
+        // TODO Yarn Client模式走这里，负责启动Executor: 特别注意，yarn client模式Driver启动在本地，AM启动在yarn上，
+        //  AM负责启动Executor
         runExecutorLauncher()
       }
     } catch {
@@ -460,6 +465,7 @@ private[spark] class ApplicationMaster(
     logInfo {
       val executorMemory = _sparkConf.get(EXECUTOR_MEMORY).toInt
       val executorCores = _sparkConf.get(EXECUTOR_CORES)
+      // TODO 使用当前applicationId在AM容器中启动Driver
       val dummyRunner = new ExecutorRunnable(None, yarnConf, _sparkConf, driverUrl, "<executorId>",
         "<hostname>", executorMemory, executorCores, appId, securityMgr, localResources,
         ResourceProfile.DEFAULT_RESOURCE_PROFILE_ID)
@@ -480,6 +486,7 @@ private[spark] class ApplicationMaster(
     // the allocator is ready to service requests.
     rpcEnv.setupEndpoint("YarnAM", new AMEndpoint(rpcEnv, driverRef))
 
+    // TODO 分配资源
     allocator.allocateResources()
     val ms = MetricsSystem.createMetricsSystem(MetricsSystemInstances.APPLICATION_MASTER,
       sparkConf, securityMgr)
@@ -493,6 +500,7 @@ private[spark] class ApplicationMaster(
 
   private def runDriver(): Unit = {
     addAmIpFilter(None, System.getenv(ApplicationConstants.APPLICATION_WEB_PROXY_BASE_ENV))
+    // TODO 开一个线程启动Driver
     userClassThread = startUserApplication()
 
     // This a bit hacky, but we need to wait until the spark.driver.port property has
@@ -508,8 +516,10 @@ private[spark] class ApplicationMaster(
         val userConf = sc.getConf
         val host = userConf.get(DRIVER_HOST_ADDRESS)
         val port = userConf.get(DRIVER_PORT)
+        // TODO 注册AM地址
         registerAM(host, port, userConf, sc.ui.map(_.webUrl), appAttemptId)
 
+        // TODO 连接Driver的RPC客户端
         val driverRef = rpcEnv.setupEndpointRef(
           RpcAddress(host, port),
           YarnSchedulerBackend.ENDPOINT_NAME)
@@ -519,6 +529,7 @@ private[spark] class ApplicationMaster(
         // if the user app did not create a SparkContext.
         throw new IllegalStateException("User did not initialize spark context!")
       }
+      // TODO 恢复Driver
       resumeDriver()
       userClassThread.join()
     } catch {
@@ -719,6 +730,7 @@ private[spark] class ApplicationMaster(
       // TODO(davies): add R dependencies here
     }
 
+    // TODO 加载用户的mainClass
     val mainMethod = userClassLoader.loadClass(args.userClass)
       .getMethod("main", classOf[Array[String]])
 
@@ -729,6 +741,7 @@ private[spark] class ApplicationMaster(
             logError(s"Could not find static main method in object ${args.userClass}")
             finish(FinalApplicationStatus.FAILED, ApplicationMaster.EXIT_EXCEPTION_USER_CLASS)
           } else {
+            // TODO 执行用户的main方法（启动Driver)
             mainMethod.invoke(null, userArgs.toArray)
             finish(FinalApplicationStatus.SUCCEEDED, ApplicationMaster.EXIT_SUCCESS)
             logDebug("Done running user class")
@@ -846,6 +859,7 @@ object ApplicationMaster extends Logging {
 
   private var master: ApplicationMaster = _
 
+  // TODO AM入口
   def main(args: Array[String]): Unit = {
     SignalUtils.registerLogger(log)
     val amArgs = new ApplicationMasterArguments(args)

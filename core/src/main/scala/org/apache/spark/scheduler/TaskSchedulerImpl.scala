@@ -217,6 +217,8 @@ private[spark] class TaskSchedulerImpl(
   def newTaskId(): Long = nextTaskId.getAndIncrement()
 
   override def start(): Unit = {
+    // TODO Yarn client模式的AM就是这里的backend.start里面提交的
+    //  YarnClientSchedulerBackend.start / YarnClusterSchedulerBackend.start / ...
     backend.start()
 
     if (!isLocal && conf.get(SPECULATION_ENABLED)) {

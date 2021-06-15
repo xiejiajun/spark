@@ -199,11 +199,13 @@ private[spark] class Client(
       verifyClusterResources(newAppResponse)
 
       // Set up the appropriate contexts to launch our AM
+      // TODO 构建AM容器启动上下文和应用提交上下文: 主要逻辑都在这
       val containerContext = createContainerLaunchContext(newAppResponse)
       val appContext = createApplicationSubmissionContext(newApp, containerContext)
 
       // Finally, submit and monitor the application
       logInfo(s"Submitting application $appId to ResourceManager")
+      // TODO 提交应用到RM
       yarnClient.submitApplication(appContext)
       launcherBackend.setAppId(appId.toString)
       reportLauncherState(SparkAppHandle.State.SUBMITTED)
@@ -886,6 +888,7 @@ private[spark] class Client(
     val launchEnv = setupLaunchEnv(stagingDirPath, pySparkArchives)
     val localResources = prepareLocalResources(stagingDirPath, pySparkArchives)
 
+    // TODO 创建AM容器
     val amContainer = Records.newRecord(classOf[ContainerLaunchContext])
     amContainer.setLocalResources(localResources.asJava)
     amContainer.setEnvironment(launchEnv.asJava)
@@ -929,6 +932,7 @@ private[spark] class Client(
           .map(Utils.substituteAppId(_, appId.toString))
           .map(YarnSparkHadoopUtil.escapeForShell)
       }
+      // TODO 由于Driver和AM启动在同一个Yarn Container里面，所以这里需要处理Driver依赖
       val libraryPaths = Seq(sparkConf.get(DRIVER_LIBRARY_PATH),
         sys.props.get("spark.driver.libraryPath")).flatten
       if (libraryPaths.nonEmpty) {
@@ -964,6 +968,7 @@ private[spark] class Client(
 
     val userClass =
       if (isClusterMode) {
+        // TODO 指定用户开发的mainClass给AM容器运行
         Seq("--class", YarnSparkHadoopUtil.escapeForShell(args.userClass))
       } else {
         Nil
@@ -988,8 +993,11 @@ private[spark] class Client(
       }
     val amClass =
       if (isClusterMode) {
+        // TODO cluster模式AM启动类
         Utils.classForName("org.apache.spark.deploy.yarn.ApplicationMaster").getName
       } else {
+        // TODO yarn client模式提交用于启动Executor的AM的入口类, 实际上是ApplicationMaster的包装类，所以其逻辑跟
+        //  ApplicationMaster完全一致
         Utils.classForName("org.apache.spark.deploy.yarn.ExecutorLauncher").getName
       }
     if (args.primaryRFile != null &&
@@ -1224,7 +1232,9 @@ private[spark] class Client(
    * throw an appropriate SparkException.
    */
   def run(): Unit = {
+    // TODO 提交应用到Yarn: 重点
     this.appId = submitApplication()
+    // TODO 监控应用状态
     if (!launcherBackend.isConnected() && fireAndForget) {
       val report = getApplicationReport(appId)
       val state = report.getYarnApplicationState
@@ -1234,6 +1244,7 @@ private[spark] class Client(
         throw new SparkException(s"Application $appId finished with status: $state")
       }
     } else {
+      // TODO 如果不是cluster模式或者WAIT_FOR_APP_COMPLETION为false才会执行到这个分支
       val YarnAppReport(appState, finalState, diags) = monitorApplication(appId)
       if (appState == YarnApplicationState.FAILED || finalState == FinalApplicationStatus.FAILED) {
         diags.foreach { err =>
@@ -1622,6 +1633,7 @@ private object Client extends Logging {
   }
 }
 
+// TODO Spark On Yarn Cluster模式本地启动的客户端入口类
 private[spark] class YarnClusterApplication extends SparkApplication {
 
   override def start(args: Array[String], conf: SparkConf): Unit = {
