@@ -26,6 +26,9 @@
 -> ... -> RDD#iterator: RDD封装的数据处理逻辑执行入口 -> ... -> RDD#computeOrReadCheckpoint
 -> RDD#compute: 具体RDD实现的compute方法，里面会调用用户编写的逻辑, 详细分析请看MapPartitionsRDD.compute,其他RDD实现也一样
 
+- [可以说new SparkContext是Spark应用的入口](https://github.com/xiejiajun/spark-learn/blob/master/src/main/scala/com/jiajun/spark/core/rdd/actions/RDDActionExample.scala)
+    - 只不过现在线程都通过SparkSession.getOrCreate等方法进行封装了，很少直接new SparkContext了
+
 ---
 - Spark On Yarn Cluster模式： ... -> SparkSubmit#runMain -> YarnClusterApplication.start -> Client#run -> Client#submitApplication
   -> Client#createContainerLaunchContext:构建AM容器启动命令，指定ApplicationMaster为AM启动类，并通过--class在AM容器中指定Driver入口类 -> yarnClient.submitApplication ->
