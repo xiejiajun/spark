@@ -241,6 +241,11 @@ case class ExpressionEncoder[T](
    * 1. If `serializer` encodes a raw object to a struct, strip the outer If-IsNull and get
    *    the `CreateNamedStruct`.
    * 2. For other cases, wrap the single serializer with `CreateNamedStruct`.
+   * TODO 一个用于将原始对象转换成InternalRow对象的表达式序列，每个顶层字段对应一个能用来从原始object中
+   *   抽取字段值到InternalRow对象的表达式:
+   *   1. 如果序列化器成功将原始对象解码成命名结构，则去掉外层的if-isNull直接返回CreateNamedStruct
+   *   2. 如果序列化器未能成功将原始对象解码成命名结构，使用CreateNamedStruct将其包装成一个只有一个
+   *      名为value的字段的Row
    */
   val serializer: Seq[NamedExpression] = {
     val clsName = Utils.getSimpleName(clsTag.runtimeClass)
@@ -275,6 +280,9 @@ case class ExpressionEncoder[T](
    *
    * For complex objects that are encoded to structs, Fields of the struct will be extracted using
    * `GetColumnByOrdinal` with corresponding ordinal.
+   * TODO 生成用于将Row对象反序列化成和原始的T类型兼容的对象的表达式。Row对象的字段将会使用UnresolvedAttribute抽取到
+   *   T类型对象构造函数的同名参数上。
+   *   对于被编码成structs的复杂对象， struct的字段将会使用GetColumnByOrdinal按相应的顺序进行提取
    */
   val deserializer: Expression = {
     if (isSerializedAsStructForTopLevel) {
@@ -299,6 +307,7 @@ case class ExpressionEncoder[T](
 
   // The schema after converting `T` to a Spark SQL row. This schema is dependent on the given
   // serializer.
+  // TODO 将类型为T的对象转换成Spark SQL的Row对象后对应的schema, 该schema由上面的serializer抽取得来
   val schema: StructType = StructType(serializer.map { s =>
     StructField(s.name, s.dataType, s.nullable)
   })
@@ -385,6 +394,7 @@ case class ExpressionEncoder[T](
    * Note that the returned [[Serializer]] is not thread safe. Multiple calls to
    * `serializer.apply(..)` are allowed to return the same actual [[InternalRow]] object.  Thus,
    *  the caller should copy the result before making another call if required.
+   *  TODO 包装了serializer的提供给外部使用的将类型T序列化成Spark SQL的Row类型的序列化器
    */
   def createSerializer(): Serializer[T] = new Serializer[T](optimizedSerializer)
 
@@ -393,6 +403,8 @@ case class ExpressionEncoder[T](
    *
    * Note that you must `resolveAndBind` an encoder to a specific schema before you can create a
    * deserializer.
+   * TODO 包装了deserializer的提供给外部使用的将Spark SQL的Row类型转换成类型T的反序列化器
+   *   需要注意的是：在创建解码器之前需要调用resolveAndBind方法将ExpressionEncoder指定到特定的schema
    */
   def createDeserializer(): Deserializer[T] = new Deserializer[T](optimizedDeserializer)
 

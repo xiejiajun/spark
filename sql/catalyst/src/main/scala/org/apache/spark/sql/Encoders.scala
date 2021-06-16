@@ -170,7 +170,8 @@ object Encoders {
    * This encoder maps T into a single byte array (binary) field.
    *
    * T must be publicly accessible.
-   *
+   * TODO 主要供Java API使用的显式根据Java Pojo类型构建Encoder的方法，因为Java无法定义ClassTag隐式对象
+   *   所以这个方法根据class对象显式构建ClassTag对象并显式传递给底层的classTag隐式方法
    * @since 1.6.0
    */
   def kryo[T](clazz: Class[T]): Encoder[T] = kryo(ClassTag[T](clazz))
