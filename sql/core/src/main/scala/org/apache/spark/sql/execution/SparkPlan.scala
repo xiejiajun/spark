@@ -381,6 +381,7 @@ abstract class SparkPlan extends QueryPlan[SparkPlan] with Logging with Serializ
   }
 
   /**
+   * TODO 调用RDD.collect触发计算
    * Runs this query returning the result as an array.
    */
   def executeCollect(): Array[InternalRow] = {

@@ -1743,6 +1743,7 @@ class Dataset[T] private[sql](
    * @since 1.6.0
    */
   def reduce(func: (T, T) => T): T = withNewRDDExecutionId {
+    // TODO 触发计算
     rdd.reduce(func)
   }
 
@@ -2715,7 +2716,7 @@ class Dataset[T] private[sql](
    *
    * @note this method should only be used if the resulting array is expected to be small, as
    * all the data is loaded into the driver's memory.
-   *
+   * TODO DataSet.collectFromPlan -> SparkPlan.executeCollect -> RDD.collect -> ...
    * @group action
    * @since 1.6.0
    */
@@ -2933,7 +2934,7 @@ class Dataset[T] private[sql](
    *
    * Running tail requires moving data into the application's driver process, and doing so with
    * a very large `n` can crash the driver process with OutOfMemoryError.
-   *
+   * TODO DataSet.collectFromPlan -> SparkPlan.executeCollect -> RDD.collect -> ...
    * @group action
    * @since 3.0.0
    */
@@ -2958,7 +2959,7 @@ class Dataset[T] private[sql](
    * doing so on a very large dataset can crash the driver process with OutOfMemoryError.
    *
    * For Java API, use [[collectAsList]].
-   *
+   * TODO DataSet.collectFromPlan -> SparkPlan.executeCollect -> RDD.collect -> ...
    * @group action
    * @since 1.6.0
    */
@@ -2969,11 +2970,11 @@ class Dataset[T] private[sql](
    *
    * Running collect requires moving all the data into the application's driver process, and
    * doing so on a very large dataset can crash the driver process with OutOfMemoryError.
-   *
    * @group action
    * @since 1.6.0
    */
   def collectAsList(): java.util.List[T] = withAction("collectAsList", queryExecution) { plan =>
+    // TODO DataSet.collectFromPlan -> SparkPlan.executeCollect -> RDD.collect -> ...
     val values = collectFromPlan(plan)
     java.util.Arrays.asList(values : _*)
   }
@@ -2993,6 +2994,7 @@ class Dataset[T] private[sql](
   def toLocalIterator(): java.util.Iterator[T] = {
     withAction("toLocalIterator", queryExecution) { plan =>
       val fromRow = resolvedEnc.createDeserializer()
+      // TODO SparkPlan.executeToIterator -> RDD.toLocalIterator -> RDD.runJob
       plan.executeToIterator().map(fromRow).asJava
     }
   }
@@ -3003,6 +3005,7 @@ class Dataset[T] private[sql](
    * @since 1.6.0
    */
   def count(): Long = withAction("count", groupBy().count().queryExecution) { plan =>
+    // TODO SparkPlan.executeCollect -> RDD.collect -> ...
     plan.executeCollect().head.getLong(0)
   }
 
@@ -3237,6 +3240,7 @@ class Dataset[T] private[sql](
    * @since 1.6.0
    */
   lazy val rdd: RDD[T] = {
+    // TODO 通过Encoder的反序列化器解码获取Row对象原本的case class对象类型
     val objectType = exprEnc.deserializer.dataType
     rddQueryExecution.toRdd.mapPartitions { rows =>
       rows.map(_.get(0, objectType).asInstanceOf[T])
@@ -3297,6 +3301,7 @@ class Dataset[T] private[sql](
    * @since 2.0.0
    */
   def createOrReplaceTempView(viewName: String): Unit = withPlan {
+    // TODO 注册临时表/视图
     createTempViewCommand(viewName, replace = true, global = false)
   }
 
@@ -3335,6 +3340,7 @@ class Dataset[T] private[sql](
     createTempViewCommand(viewName, replace = true, global = true)
   }
 
+  // TODO 用于注册临时表/视图
   private def createTempViewCommand(
       viewName: String,
       replace: Boolean,
@@ -3360,7 +3366,7 @@ class Dataset[T] private[sql](
 
   /**
    * Interface for saving the content of the non-streaming Dataset out into external storage.
-   *
+   * TODO 用于写数据到外部系统，也是一个触发计算的方法
    * @group basic
    * @since 1.6.0
    */
@@ -3387,7 +3393,7 @@ class Dataset[T] private[sql](
    * {{{
    *   df.writeTo("catalog.db.table").partitionedBy($"col").createOrReplace()
    * }}}
-   *
+   * TODO 用于写数据到外部系统，也是一个触发计算的方法
    * @group basic
    * @since 3.0.0
    */
@@ -3402,7 +3408,7 @@ class Dataset[T] private[sql](
 
   /**
    * Interface for saving the content of the streaming Dataset out into external storage.
-   *
+   * TODO 用于写流式数据到外部系统，也是一个触发计算的方法
    * @group basic
    * @since 2.0.0
    */
@@ -3411,6 +3417,7 @@ class Dataset[T] private[sql](
       logicalPlan.failAnalysis(
         "'writeStream' can be called only on streaming Dataset/DataFrame")
     }
+    // TODO 构建流式Writer
     new DataStreamWriter[T](this)
   }
 
@@ -3693,6 +3700,8 @@ class Dataset[T] private[sql](
    */
   private def collectFromPlan(plan: SparkPlan): Array[T] = {
     val fromRow = resolvedEnc.createDeserializer()
+    // TODO 触发计算并将计算结果转换到原来的case class类型T的对象
+    //  SparkPlan.executeCollect -> RDD.collect -> ...
     plan.executeCollect().map(fromRow)
   }
 

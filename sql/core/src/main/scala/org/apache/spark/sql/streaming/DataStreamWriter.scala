@@ -384,6 +384,7 @@ final class DataStreamWriter[T] private[sql](ds: Dataset[T]) {
     }
   }
 
+  // TODO 开始写出数据
   private def startInternal(path: Option[String]): StreamingQuery = {
     if (source.toLowerCase(Locale.ROOT) == DDLUtils.HIVE_PROVIDER) {
       throw new AnalysisException("Hive data source can only be used with tables, you can not " +
@@ -398,6 +399,7 @@ final class DataStreamWriter[T] private[sql](ds: Dataset[T]) {
       val sink = new MemorySink()
       val resultDf = Dataset.ofRows(df.sparkSession, new MemoryPlan(sink, df.schema.toAttributes))
       val recoverFromCheckpoint = outputMode == OutputMode.Complete()
+      // TODO 启动Query
       val query = startQuery(sink, extraOptions, recoverFromCheckpoint = recoverFromCheckpoint)
       resultDf.createOrReplaceTempView(query.name)
       query
@@ -457,6 +459,7 @@ final class DataStreamWriter[T] private[sql](ds: Dataset[T]) {
     }
   }
 
+  // TODO 触发流式写入的入口
   private def startQuery(
       sink: Table,
       newOptions: CaseInsensitiveMap[String],

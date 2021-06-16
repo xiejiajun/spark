@@ -300,6 +300,7 @@ final class DataFrameWriter[T] private[sql](ds: Dataset[T]) {
    */
   def save(): Unit = saveInternal(None)
 
+  // TODO 触发计算 & 获取结果 & 写数据
   private def saveInternal(path: Option[String]): Unit = {
     if (source.toLowerCase(Locale.ROOT) == DDLUtils.HIVE_PROVIDER) {
       throw new AnalysisException("Hive data source can only be used with tables, you can not " +
@@ -416,6 +417,7 @@ final class DataFrameWriter[T] private[sql](ds: Dataset[T]) {
     }
   }
 
+  // TODO 写数据
   private def saveToV1Source(path: Option[String]): Unit = {
     partitioningColumns.foreach { columns =>
       extraOptions = extraOptions + (
@@ -429,6 +431,7 @@ final class DataFrameWriter[T] private[sql](ds: Dataset[T]) {
       extraOptions + ("path" -> path.get)
     }
 
+    // TODO 写数据到数据源
     // Code path for data source v1.
     runCommand(df.sparkSession, "save") {
       DataSource(

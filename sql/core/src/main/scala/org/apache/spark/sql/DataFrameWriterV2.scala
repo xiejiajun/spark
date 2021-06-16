@@ -106,8 +106,10 @@ final class DataFrameWriterV2[T] private[sql](table: String, ds: Dataset[T])
     this
   }
 
+  // TODO 写数据
   override def create(): Unit = {
     runCommand("create") {
+      // TODO create table as select：触发计算 & 写数据
       CreateTableAsSelectStatement(
         tableName,
         logicalPlan,
@@ -161,6 +163,7 @@ final class DataFrameWriterV2[T] private[sql](table: String, ds: Dataset[T])
    */
   @throws(classOf[NoSuchTableException])
   def overwrite(condition: Column): Unit = {
+    // TODO insert overwrite: 触发计算 & 写数据
     val overwrite = OverwriteByExpression.byName(
       UnresolvedRelation(tableName), logicalPlan, condition.expr, options.toMap)
     runCommand("overwrite")(overwrite)
@@ -181,6 +184,7 @@ final class DataFrameWriterV2[T] private[sql](table: String, ds: Dataset[T])
    */
   @throws(classOf[NoSuchTableException])
   def overwritePartitions(): Unit = {
+    // TODO 触发计算 & 写数据
     val dynamicOverwrite = OverwritePartitionsDynamic.byName(
       UnresolvedRelation(tableName), logicalPlan, options.toMap)
     runCommand("overwritePartitions")(dynamicOverwrite)
@@ -189,6 +193,7 @@ final class DataFrameWriterV2[T] private[sql](table: String, ds: Dataset[T])
   /**
    * Wrap an action to track the QueryExecution and time cost, then report to the user-registered
    * callback functions.
+   * TODO 触发计算的入口
    */
   private def runCommand(name: String)(command: LogicalPlan): Unit = {
     val qe = sparkSession.sessionState.executePlan(command)
@@ -198,6 +203,7 @@ final class DataFrameWriterV2[T] private[sql](table: String, ds: Dataset[T])
 
   private def internalReplace(orCreate: Boolean): Unit = {
     runCommand("replace") {
+      // TODO 触发计算 & 写数据
       ReplaceTableAsSelectStatement(
         tableName,
         logicalPlan,
