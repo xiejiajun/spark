@@ -2885,6 +2885,7 @@ class Dataset[T] private[sql](
    * @since 1.6.0
    */
   def foreach(f: T => Unit): Unit = withNewRDDExecutionId {
+    // TODO 触发计算
     rdd.foreach(f)
   }
 
@@ -2904,6 +2905,7 @@ class Dataset[T] private[sql](
    * @since 1.6.0
    */
   def foreachPartition(f: Iterator[T] => Unit): Unit = withNewRDDExecutionId {
+    // TODO 触发计算
     rdd.foreachPartition(f)
   }
 
@@ -3242,6 +3244,11 @@ class Dataset[T] private[sql](
   lazy val rdd: RDD[T] = {
     // TODO 通过Encoder的反序列化器解码获取Row对象原本的case class对象类型
     val objectType = exprEnc.deserializer.dataType
+    // TODO QueryExecution.toRdd -> SparkPlan.execute -> xxxExec.doExecute
+    //  Spark SQL的QueryExecution.toRdd主要分为两种：
+    //  1. FileSourceScanExec/HiveTableScanExec/InMemoryTableScanExec/ExecutedCommandExec等
+    //     SparkPlan实现类的doExecute方法是从源头数据构建出RDD[InternalRow]
+    //  2. 其他SparkPlan实现类时将上游RDD[InternalRow]经过一系列转换逻辑得到下游RDD[InternalRow]
     rddQueryExecution.toRdd.mapPartitions { rows =>
       rows.map(_.get(0, objectType).asInstanceOf[T])
     }
@@ -3514,7 +3521,13 @@ class Dataset[T] private[sql](
    */
   private[sql] def javaToPython: JavaRDD[Array[Byte]] = {
     val structType = schema  // capture it for closure
+    // TODO QueryExecution.toRdd -> SparkPlan.execute -> xxxExec.doExecute
+    //  Spark SQL的QueryExecution.toRdd主要分为两种：
+    //  1. FileSourceScanExec/HiveTableScanExec/InMemoryTableScanExec/ExecutedCommandExec等
+    //     SparkPlan实现类的doExecute方法是从源头数据构建出RDD[InternalRow]
+    //  2. 其他SparkPlan实现类时将上游RDD[InternalRow]经过一系列转换逻辑得到下游RDD[InternalRow]
     val rdd = queryExecution.toRdd.map(EvaluatePython.toJava(_, structType))
+    // TODO 使用Python序列化工具转换
     EvaluatePython.javaToPython(rdd)
   }
 
@@ -3744,6 +3757,11 @@ class Dataset[T] private[sql](
     val schemaCaptured = this.schema
     val maxRecordsPerBatch = sparkSession.sessionState.conf.arrowMaxRecordsPerBatch
     val timeZoneId = sparkSession.sessionState.conf.sessionLocalTimeZone
+    // TODO SparkPlan.execute -> xxxExec.doExecute
+    //  Spark SQL的主要分为两种：
+    //  1. FileSourceScanExec/HiveTableScanExec/InMemoryTableScanExec/ExecutedCommandExec等
+    //     SparkPlan实现类的doExecute方法是从源头数据构建出RDD[InternalRow]
+    //  2. 其他SparkPlan实现类时将上游RDD[InternalRow]经过一系列转换逻辑得到下游RDD[InternalRow]
     plan.execute().mapPartitionsInternal { iter =>
       val context = TaskContext.get()
       ArrowConverters.toBatchIterator(

@@ -87,6 +87,7 @@ case class ExecutedCommandExec(cmd: RunnableCommand) extends LeafExecNode {
   }
 
   protected override def doExecute(): RDD[InternalRow] = {
+    // TODO 将list jars/list files等命令的执行结果封装为RDD作为source
     sqlContext.sparkContext.parallelize(sideEffectResult, 1)
   }
 }
@@ -105,6 +106,7 @@ case class DataWritingCommandExec(cmd: DataWritingCommand, child: SparkPlan)
 
   protected[sql] lazy val sideEffectResult: Seq[InternalRow] = {
     val converter = CatalystTypeConverters.createToCatalystConverter(schema)
+    // TODO 执行insert逻辑
     val rows = cmd.run(sqlContext.sparkSession, child)
 
     rows.map(converter(_).asInstanceOf[InternalRow])

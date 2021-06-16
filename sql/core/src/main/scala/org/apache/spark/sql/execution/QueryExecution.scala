@@ -129,6 +129,8 @@ class QueryExecution(
    * use `Dataset.rdd` instead where conversion will be applied.
    */
   lazy val toRdd: RDD[InternalRow] = new SQLExecutionRDD(
+    // TODO 触发RDD构建，这就是为啥说DataSet底层是RDD的原因，因为DataSet底层创建了RDD[InternalRow]
+    //   并且其整个作业的DAG都是在对RDD[InternalRow]进行转换来完成计算逻辑
     executedPlan.execute(), sparkSession.sessionState.conf)
 
   /** Get the metrics observed during the execution of the query plan. */

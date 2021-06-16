@@ -58,3 +58,14 @@
 ---
 - Shuffle服务处理请求的流程：TransportChannelHandler.channelRead0 -> TransportRequestHandler#handle -> TransportRequestHandler#processRpcRequest
 -> NettyBlockRpcServer/ExternalBlockHandler#receive -> ExternalBlockHandler#handleMessage(外部Shuffle服务支持)/NettyBlockRpcServer#receive(内嵌的Shuffle服务)
+
+
+---
+### DataSet API分析
+- DataSet API触发计算流程： 
+    - 线路1：DataSet.reduce/foreachPartition/foreach -> DataSet.rdd.reduce(DataSet.rdd最终会触发DataSet构建RDD[InternalRow]并对RDD[InternalRow]进行一系列转换构建出基于RDD[InternalRow]的DAG，然后执行RDD[InternalRow].reduce触发计算)
+    - 线路2：DataSet.xxx -> DataSet.collectFromPlan/count -> ... -> SparkPlan.executeCollect -> SparkPlan.getByteArrayRdd ->
+      SparkPlan.execute(触发DataSet构建RDD[InternalRow]并对RDD[InternalRow]进行一系列转换构建出基于RDD[InternalRow]的DAG) -> RDD.collect触发计算
+    - 线路3：DataSet.toLocalIterator -> SparkPlan.executeToIterator -> SparkPlan.getByteArrayRdd 
+      -> SparkPlan.execute(触发DataSet构建RDD[InternalRow]并对RDD[InternalRow]进行一系列转换构建出基于RDD[InternalRow]的DAG)
+      -> RDD.toLocalIterator触发计算

@@ -177,6 +177,8 @@ abstract class SparkPlan extends QueryPlan[SparkPlan] with Logging with Serializ
     if (isCanonicalizedPlan) {
       throw new IllegalStateException("A canonicalized plan is not supposed to be executed.")
     }
+    // TODO FileSourceScanExec/HiveTableScanExec/InMemoryTableScanExec/ExecutedCommandExec.doExecute
+    //   等SparkPlan实现类是创建RDD的source，DataWritingCommandExec.doExecute是Sink
     doExecute()
   }
 
