@@ -243,6 +243,7 @@ private[spark] class ApplicationMaster(
       // This shutdown hook should run *after* the SparkContext is shut down.
       val priority = ShutdownHookManager.SPARK_CONTEXT_SHUTDOWN_PRIORITY - 1
       ShutdownHookManager.addShutdownHook(priority) { () =>
+        // TODO 获取最大失败重启次数
         val maxAppAttempts = client.getMaxRegAttempts(sparkConf, yarnConf)
         val isLastAttempt = appAttemptId.getAttemptId() >= maxAppAttempts
 
@@ -260,6 +261,7 @@ private[spark] class ApplicationMaster(
         if (!unregistered) {
           // we only want to unregister if we don't want the RM to retry
           if (finalStatus == FinalApplicationStatus.SUCCEEDED || isLastAttempt) {
+            // TODO 任务成功或者最后一次重试的时候对资源进行清理，所以Spark任务的生命周期是在AM里面管理的
             unregister(finalStatus, finalMsg)
             cleanupStagingDir(new Path(System.getenv("SPARK_YARN_STAGING_DIR")))
           }

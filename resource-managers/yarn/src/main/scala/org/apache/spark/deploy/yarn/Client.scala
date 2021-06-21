@@ -201,6 +201,7 @@ private[spark] class Client(
       // Set up the appropriate contexts to launch our AM
       // TODO 构建AM容器启动上下文和应用提交上下文: 主要逻辑都在这
       val containerContext = createContainerLaunchContext(newAppResponse)
+      // TODO 这里会设置Task失败最大重试次数等信息，所以Spark Executor执行任务失败重启是Yarn完成的
       val appContext = createApplicationSubmissionContext(newApp, containerContext)
 
       // Finally, submit and monitor the application
@@ -270,6 +271,7 @@ private[spark] class Client(
       appContext.setApplicationTags(new java.util.HashSet[String](tags.asJava))
     }
     sparkConf.get(MAX_APP_ATTEMPTS) match {
+        // TODO 设置失败重试次数，Task失败后由Yarn自动重启
       case Some(v) => appContext.setMaxAppAttempts(v)
       case None => logDebug(s"${MAX_APP_ATTEMPTS.key} is not set. " +
           "Cluster's default value will be used.")
